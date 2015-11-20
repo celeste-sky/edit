@@ -30,9 +30,11 @@ class EditPane(Gtk.Notebook):
             min_content_height=800, min_content_width=600)
         scroll.add(view)
         
-        self.append_page(scroll, Gtk.Label(path))
         self.tabs.append(Tab(view, buf, path))
+        
+        self.append_page(scroll, Gtk.Label(path))
         self.show_all()
+        self.set_current_page(len(self.tabs) - 1)
 
     def save(self, widget):
         tab = self.tabs[self.get_current_page()]
