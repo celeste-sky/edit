@@ -8,7 +8,10 @@ class EditWindow(Gtk.Window):
     def __init__(self):
         super(EditWindow, self).__init__(title="Edit")
         self.text = GtkSource.View(
-            auto_indent=True, insert_spaces_instead_of_tabs=True)
+            auto_indent=True, 
+            insert_spaces_instead_of_tabs=True, 
+            tab_width=4, 
+            show_line_numbers=True)
         self.language_manager = GtkSource.LanguageManager()
         self.buf = GtkSource.Buffer()
 
@@ -44,6 +47,13 @@ class EditWindow(Gtk.Window):
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         save.connect("activate", self.do_save)
         file_menu.add(save)
+        
+        quit = Gtk.MenuItem(label="Quit")
+        key, mod = Gtk.accelerator_parse("<Control>q")
+        quit.add_accelerator(
+            "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
+        quit.connect("activate", Gtk.main_quit)
+        file_menu.add(quit)
         
         self.menu_bar.add(file_menu_item)    
 
