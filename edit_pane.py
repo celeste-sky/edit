@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-from gi.repository import Gtk, GtkSource
 import collections
+from gi.repository import Gtk, GtkSource
+import os.path
 
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
@@ -12,6 +13,8 @@ class EditPane(Gtk.Notebook):
         self.tabs = []
         
     def open_file(self, path):
+        if os.path.abspath(path).startswith(os.path.abspath(os.curdir)):
+            path = os.path.relpath(path)
         with open(path) as f:
             content = f.read()
             
