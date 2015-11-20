@@ -1,13 +1,15 @@
 #!/usr/bin/python
 
 from gi.repository import Gtk, GtkSource
+import collections
+
+Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
     def __init__(self, *args, **kwargs):
         super(EditPane, self).__init__(*args, **kwargs)
         self.language_manager = GtkSource.LanguageManager()
-        self.src_views = []
-        self.buffers = []
+        self.tabs = []
         
     def open_file(self, path):
         with open(path) as f:
@@ -18,20 +20,27 @@ class EditPane(Gtk.Notebook):
             insert_spaces_instead_of_tabs=True, 
             tab_width=4, 
             show_line_numbers=True)
-        self.src_views.append(view)
         
         buf = GtkSource.Buffer()
         buf.set_text(content)
         buf.set_language(self.language_manager.get_language("python"))
         view.set_buffer(buf)
-        self.buffers.append(buf)
         
         scroll = Gtk.ScrolledWindow(
             min_content_height=800, min_content_width=600)
         scroll.add(view)
         
         self.append_page(scroll, Gtk.Label(path))
+        self.tabs.append(Tab(view, buf, path))
         self.show_all()
+
+    def save(self, widget):
+        tab = self.tabs[self.get_current_page()]
+        with open(tab.path, "w") as f:
+            f.write(tab.buffer.get_text(
+                tab.buffer.get_start_iter(),
+                tab.buffer.get_end_iter(),
+                False))
         
 if __name__ == '__main__':  
     print "hello"

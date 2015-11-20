@@ -1,5 +1,4 @@
 #!/usr/bin/python
-#
 
 from gi.repository import Gdk, GObject, Gtk, GtkSource
 import sys
@@ -31,7 +30,7 @@ class EditWindow(Gtk.Window):
         key, mod = Gtk.accelerator_parse("<Control>s")        
         save.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
-        save.connect("activate", self.do_save)
+        save.connect("activate", self.edit_pane.save)
         file_menu.add(save)
         
         open_item = Gtk.MenuItem(label="Open")
@@ -49,9 +48,6 @@ class EditWindow(Gtk.Window):
         file_menu.add(quit)
         
         self.menu_bar.add(file_menu_item)    
-
-    def do_save(self, widget):
-        print "save {}".format(__file__)
                 
     def do_open(self, widget):
         dialog = Gtk.FileChooserDialog(
