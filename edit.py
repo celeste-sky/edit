@@ -48,6 +48,13 @@ class EditWindow(Gtk.Window):
         save.connect("activate", self.do_save)
         file_menu.add(save)
         
+        open_item = Gtk.MenuItem(label="Open")
+        key, mod = Gtk.accelerator_parse("<Control>o")
+        open_item.add_accelerator(
+            "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
+        open_item.connect("activate", self.do_open)
+        file_menu.add(open_item)
+        
         quit = Gtk.MenuItem(label="Quit")
         key, mod = Gtk.accelerator_parse("<Control>q")
         quit.add_accelerator(
@@ -62,6 +69,19 @@ class EditWindow(Gtk.Window):
         with open(__file__, "w") as f:
             f.write(self.buf.get_text(
                 self.buf.get_start_iter(), self.buf.get_end_iter(), True))
+                
+    def do_open(self, widget):
+        dialog = Gtk.FileChooserDialog(
+            "Open File", 
+            self,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT))
+        res = dialog.run()
+        if res == Gtk.ResponseType.ACCEPT:
+            with open(dialog.get_filename()) as f:
+                self.buf.set_text(f.read())
+        dialog.destroy()
 
 if __name__ == '__main__':
     win = EditWindow()
