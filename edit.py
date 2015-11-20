@@ -17,8 +17,8 @@ class EditWindow(Gtk.Window):
         self._build_menus()
 
         self.vbox = Gtk.VBox()
-        self.vbox.add(self.menu_bar)
-        self.vbox.add(self.edit_pane)
+        self.vbox.pack_start(self.menu_bar, False, False, 0)
+        self.vbox.pack_start(self.edit_pane, True, True, 0)
         self.add(self.vbox)
         
     def _build_menus(self):
