@@ -13,7 +13,7 @@ class EditPane(Gtk.Notebook):
         with open(path) as f:
             content = f.read()
             
-        view =  GtkSource.View(
+        view = GtkSource.View(
             auto_indent=True, 
             insert_spaces_instead_of_tabs=True, 
             tab_width=4, 
@@ -31,6 +31,7 @@ class EditPane(Gtk.Notebook):
         scroll.add(view)
         
         self.append_page(scroll, Gtk.Label(path))
+        self.show_all()
         
 if __name__ == '__main__':  
     print "hello"

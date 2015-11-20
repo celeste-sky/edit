@@ -3,37 +3,23 @@
 
 from gi.repository import Gdk, GObject, Gtk, GtkSource
 import sys
+from edit_pane import EditPane
 
 class EditWindow(Gtk.Window):
     def __init__(self):
         super(EditWindow, self).__init__(title="Edit")
-        self.text = GtkSource.View(
-            auto_indent=True, 
-            insert_spaces_instead_of_tabs=True, 
-            tab_width=4, 
-            show_line_numbers=True)
-        self.language_manager = GtkSource.LanguageManager()
-        self.buf = GtkSource.Buffer()
-
-        with open(__file__) as f:
-            self.buf = GtkSource.Buffer()
-            self.buf.set_text(f.read())
-            self.buf.set_language(self.language_manager.get_language("python"))
-            self.text.set_buffer(self.buf)
-
-        self.scroll = Gtk.ScrolledWindow(
-            min_content_height=800, min_content_width=800)
-        self.scroll.add(self.text)
+        
+        self.edit_pane = EditPane()
+        self.edit_pane.open_file(__file__)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
-        
         self.menu_bar = Gtk.MenuBar()
         self._build_menus()
 
         self.vbox = Gtk.VBox()
         self.vbox.add(self.menu_bar)
-        self.vbox.add(self.scroll)
+        self.vbox.add(self.edit_pane)
         self.add(self.vbox)
         
     def _build_menus(self):
@@ -66,9 +52,6 @@ class EditWindow(Gtk.Window):
 
     def do_save(self, widget):
         print "save {}".format(__file__)
-        with open(__file__, "w") as f:
-            f.write(self.buf.get_text(
-                self.buf.get_start_iter(), self.buf.get_end_iter(), True))
                 
     def do_open(self, widget):
         dialog = Gtk.FileChooserDialog(
@@ -79,8 +62,7 @@ class EditWindow(Gtk.Window):
             Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT))
         res = dialog.run()
         if res == Gtk.ResponseType.ACCEPT:
-            with open(dialog.get_filename()) as f:
-                self.buf.set_text(f.read())
+            self.edit_pane.open_file(dialog.get_filename())
         dialog.destroy()
 
 if __name__ == '__main__':
