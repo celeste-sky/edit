@@ -37,6 +37,7 @@ class EditPane(Gtk.Notebook):
         if path:
             buf.set_text(content)
         buf.set_language(self.language_manager.get_language("python"))
+        buf.connect("changed", self.changed_handler)
         view.set_buffer(buf)
         
         scroll = Gtk.ScrolledWindow(
@@ -52,6 +53,11 @@ class EditPane(Gtk.Notebook):
         
     def new_file_handler(self, widget):
         self.open_file()
+        
+    def changed_handler(self, widget):
+        tab = self.tabs[self.get_current_page()]
+        self.set_tab_label_text(
+            tab.src_view.get_parent(), "* "+self._to_display_path(tab.path))
 
     def save_handler(self, widget):
         tab = self.tabs[self.get_current_page()]
@@ -71,15 +77,15 @@ class EditPane(Gtk.Notebook):
             else:
                 dialog.destroy()
                 return
-                
-            self.set_tab_label_text(
-                tab.src_view.get_parent(), self._to_display_path(tab.path))
-            
+   
         with open(tab.path, "w") as f:
             f.write(tab.buffer.get_text(
                 tab.buffer.get_start_iter(),
                 tab.buffer.get_end_iter(),
-                False))
+                False))     
+                           
+        self.set_tab_label_text(
+            tab.src_view.get_parent(), self._to_display_path(tab.path))
         
 if __name__ == '__main__':  
     print "hello"
