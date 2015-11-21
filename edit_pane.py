@@ -86,6 +86,14 @@ class EditPane(Gtk.Notebook):
                            
         self.set_tab_label_text(
             tab.src_view.get_parent(), self._to_display_path(tab.path))
+            
+    def close_tab_handler(self, widget):
+        if not self.tabs:
+            return
+        
+        current = self.get_current_page()
+        self.remove_page(current)
+        del self.tabs[current]
         
 if __name__ == '__main__':  
     print "hello"

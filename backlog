@@ -1,4 +1,3 @@
-- close tabs
 - remember open tabs
 - dirty close save prompt
 - python importer/importee
@@ -10,5 +9,7 @@
 - undo / redo
 - goto line
 - find
+- replace
 - highlight current symbol
 - vim bindings
+- multi-edit

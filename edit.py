@@ -48,6 +48,13 @@ class EditWindow(Gtk.Window):
         new.connect("activate", self.edit_pane.new_file_handler)
         file_menu.add(new)
         
+        close_tab = Gtk.MenuItem(label="Close Tab")
+        key, mod = Gtk.accelerator_parse("<Control>w")
+        close_tab.add_accelerator(
+            "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
+        close_tab.connect("activate", self.edit_pane.close_tab_handler)
+        file_menu.add(close_tab)
+        
         quit = Gtk.MenuItem(label="Quit")
         key, mod = Gtk.accelerator_parse("<Control>q")
         quit.add_accelerator(
