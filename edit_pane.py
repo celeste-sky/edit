@@ -13,8 +13,7 @@ class EditPane(Gtk.Notebook):
         self.tabs = []
         
     def open_file(self, path):
-        if os.path.abspath(path).startswith(os.path.abspath(os.curdir)):
-            path = os.path.relpath(path)
+        path = os.path.abspath(path)
         with open(path) as f:
             content = f.read()
             
@@ -35,7 +34,10 @@ class EditPane(Gtk.Notebook):
         
         self.tabs.append(Tab(view, buf, path))
         
-        self.append_page(scroll, Gtk.Label(path))
+        display_path = path
+        if path.startswith(os.path.abspath(os.curdir)):
+            display_path = os.path.relpath(path)
+        self.append_page(scroll, Gtk.Label(display_path))
         self.show_all()
         self.set_current_page(len(self.tabs) - 1)
 
