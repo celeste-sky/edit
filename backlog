@@ -1,0 +1,14 @@
+- close tabs
+- remember open tabs
+- dirty close save prompt
+- python importer/importee
+- C includer/includee
+- cscope declaration / callers / symbols
+- general symbol index
+- python declaration / callers / symbols
+- choose syntax by extension
+- undo / redo
+- goto line
+- find
+- highlight current symbol
+- vim bindings
