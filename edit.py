@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-from gi.repository import Gdk, GObject, Gtk, GtkSource
-import sys
 from edit_pane import EditPane
+from gi.repository import Gdk, GObject, Gtk, GtkSource
+import signal
+import sys
 
 class EditWindow(Gtk.Window):
     def __init__(self):
@@ -69,6 +70,7 @@ class EditWindow(Gtk.Window):
         dialog.destroy()
 
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     win = EditWindow()
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
