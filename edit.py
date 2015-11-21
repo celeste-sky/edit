@@ -8,7 +8,7 @@ class EditWindow(Gtk.Window):
     def __init__(self):
         super(EditWindow, self).__init__(title="Edit")
         
-        self.edit_pane = EditPane()
+        self.edit_pane = EditPane(self)
         self.edit_pane.open_file(__file__)
 
         self.accelerators = Gtk.AccelGroup()
@@ -30,15 +30,22 @@ class EditWindow(Gtk.Window):
         key, mod = Gtk.accelerator_parse("<Control>s")        
         save.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
-        save.connect("activate", self.edit_pane.save)
+        save.connect("activate", self.edit_pane.save_handler)
         file_menu.add(save)
         
         open_item = Gtk.MenuItem(label="Open")
         key, mod = Gtk.accelerator_parse("<Control>o")
         open_item.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
-        open_item.connect("activate", self.do_open)
+        open_item.connect("activate", self.open_handler)
         file_menu.add(open_item)
+        
+        new = Gtk.MenuItem(label="New")
+        key, mod = Gtk.accelerator_parse("<Control>n")
+        new.add_accelerator(
+            "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
+        new.connect("activate", self.edit_pane.new_file_handler)
+        file_menu.add(new)
         
         quit = Gtk.MenuItem(label="Quit")
         key, mod = Gtk.accelerator_parse("<Control>q")
@@ -49,7 +56,7 @@ class EditWindow(Gtk.Window):
         
         self.menu_bar.add(file_menu_item)    
                 
-    def do_open(self, widget):
+    def open_handler(self, widget):
         dialog = Gtk.FileChooserDialog(
             "Open File", 
             self,
