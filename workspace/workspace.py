@@ -43,7 +43,8 @@ class Workspace(object):
             
     def _write_config(self):
         if not os.path.exists(self.workspace_dir):
-            os.mkdir(self.workspace_dir)
+            # no workspace dir -> no saving
+            return
         with open(os.path.join(self.workspace_dir, 'config'), 'w') as f:
             f.write(json.dumps(self.config, indent=4))
     
@@ -106,14 +107,20 @@ class WorkspaceTest(unittest.TestCase):
         w = Workspace(self.ws)
         self.assert_default_files(w)
         
-    def test_write_open_files(self):
+    def test_update_doesnt_create_workspace(self):
         w = Workspace(self.ws)
         w.open_files = ['foo', 'bar']
+        self.assertFalse(os.path.exists(self.ws))
+        
+    def test_update_open_files_written(self):
+        os.mkdir(self.ws)
+        w = Workspace(self.ws)
+        w.open_files = ['foo', 'bar']        
         with open(os.path.join(self.ws, 'config')) as f:
             self.assertEqual(f.read(), 
                '{\n    "open_files": [\n        "foo", \n        "bar"\n    ]\n}')
                
-    def test_read_open_files(self):
+    def test_open_files_read(self):
         os.mkdir(os.path.join(self.ws))
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"open_files": ["foo", "bar"]}')

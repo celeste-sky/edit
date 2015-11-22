@@ -5,11 +5,10 @@
 - general symbol index
 - python declaration / callers / symbols
 - choose syntax by extension
-- undo / redo
 - goto line
 - find
 - replace
 - highlight current symbol
 - vim bindings
-- multi-edit
+- multiple cursors
 - column ruler 
