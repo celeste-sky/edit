@@ -24,8 +24,12 @@ class EditPane(Gtk.Notebook):
     def open_file(self, path=None):
         if path:
             path = os.path.abspath(path)
-            with open(path) as f:
-                content = f.read()
+            try:
+                with open(path) as f:
+                    content = f.read()
+            except IOError as e:
+                content = ''
+                print "Couldn't open {}: {}".format(path, e)
             
         view = GtkSource.View(
             auto_indent=True, 
