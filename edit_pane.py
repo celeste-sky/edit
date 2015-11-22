@@ -7,11 +7,15 @@ import os.path
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
-    def __init__(self, root_window, *args, **kwargs):
+    def __init__(self, root_window, workspace, *args, **kwargs):
         super(EditPane, self).__init__(*args, **kwargs)
         self.root_window = root_window
+        self.workspace = workspace
         self.language_manager = GtkSource.LanguageManager()
         self.tabs = []
+        
+        for path in self.workspace.open_files:
+            self._open_file(path)
     
     def _to_display_path(self, abs_path):
         if not abs_path:
@@ -20,8 +24,15 @@ class EditPane(Gtk.Notebook):
             return os.path.relpath(abs_path)
         else:
             return abs_path
-         
+            
     def open_file(self, path=None):
+        self._open_file(path)
+        self._update_open_files()
+    
+    def _update_open_files(self):
+        self.workspace.open_files = [i.path for i in self.tabs if i.path]
+             
+    def _open_file(self, path):
         if path:
             path = os.path.abspath(path)
             try:
@@ -77,6 +88,7 @@ class EditPane(Gtk.Notebook):
             if res == Gtk.ResponseType.ACCEPT:
                 tab = Tab(tab.src_view, tab.buffer, dialog.get_filename())
                 self.tabs[self.get_current_page()] = tab
+                self._update_open_files()
                 dialog.destroy()
             else:
                 dialog.destroy()
@@ -98,6 +110,7 @@ class EditPane(Gtk.Notebook):
         current = self.get_current_page()
         self.remove_page(current)
         del self.tabs[current]
+        self._update_open_files()
         
 if __name__ == '__main__':  
     print "hello"

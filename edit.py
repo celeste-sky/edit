@@ -4,13 +4,13 @@ from edit_pane import EditPane
 from gi.repository import Gdk, GObject, Gtk, GtkSource
 import signal
 import sys
+from workspace.workspace import Workspace
 
 class EditWindow(Gtk.Window):
     def __init__(self):
         super(EditWindow, self).__init__(title="Edit")
-        
-        self.edit_pane = EditPane(self)
-        self.edit_pane.open_file(__file__)
+        self.workspace = Workspace()
+        self.edit_pane = EditPane(self, self.workspace)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
