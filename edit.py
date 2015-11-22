@@ -8,7 +8,8 @@ from workspace.workspace import Workspace
 
 class EditWindow(Gtk.Window):
     def __init__(self):
-        super(EditWindow, self).__init__(title="Edit")
+        super(EditWindow, self).__init__(
+            title="Edit", default_width=600, default_height=800)
         self.workspace = Workspace()
         self.edit_pane = EditPane(self, self.workspace)
 

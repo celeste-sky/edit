@@ -16,6 +16,8 @@ class EditPane(Gtk.Notebook):
         
         for path in self.workspace.open_files:
             self._open_file(path)
+        if not self.workspace.open_files:
+            self._open_file(None)
     
     def _to_display_path(self, abs_path):
         if not abs_path:
@@ -55,8 +57,7 @@ class EditPane(Gtk.Notebook):
         buf.connect("changed", self.changed_handler)
         view.set_buffer(buf)
         
-        scroll = Gtk.ScrolledWindow(
-            min_content_height=800, min_content_width=600)
+        scroll = Gtk.ScrolledWindow()
         scroll.add(view)
         
         self.tabs.append(Tab(view, buf, path))
