@@ -3,15 +3,16 @@
 from edit_pane import EditPane
 from gi.repository import Gdk, GObject, Gtk, GtkSource
 import logging
+import os.path
 import signal
 import sys
 from workspace.workspace import Workspace
 
 class EditWindow(Gtk.Window):
-    def __init__(self):
+    def __init__(self, workspace):
         super(EditWindow, self).__init__(
             title="Edit", default_width=600, default_height=800)
-        self.workspace = Workspace()
+        self.workspace = workspace
         self.edit_pane = EditPane(self, self.workspace)
 
         self.accelerators = Gtk.AccelGroup()
@@ -73,6 +74,7 @@ class EditWindow(Gtk.Window):
             Gtk.FileChooserAction.OPEN,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
             Gtk.STOCK_OPEN, Gtk.ResponseType.ACCEPT))
+        dialog.set_current_folder(self.workspace.root_dir)
         res = dialog.run()
         if res == Gtk.ResponseType.ACCEPT:
             self.edit_pane.open_file(dialog.get_filename())
@@ -81,7 +83,16 @@ class EditWindow(Gtk.Window):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    win = EditWindow()
+    
+    ws_dir = '.workspace'
+    if len(sys.argv) == 2:
+        ws_dir = sys.argv[1]
+    if not os.path.isdir(ws_dir):
+        logging.warn(
+        'Workspace doesn\'t exist: {}'.format(ws_dir))
+    workspace = Workspace(ws_dir)
+        
+    win = EditWindow(workspace)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()

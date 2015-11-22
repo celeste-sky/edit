@@ -23,8 +23,8 @@ class EditPane(Gtk.Notebook):
     def _to_display_path(self, abs_path):
         if not abs_path:
             return "Unnamed"
-        elif abs_path.startswith(os.path.abspath(os.curdir)):
-            return os.path.relpath(abs_path)
+        elif abs_path.startswith(os.path.abspath(self.workspace.root_dir)):
+            return os.path.relpath(abs_path, self.workspace.root_dir)
         else:
             return abs_path
             
@@ -86,6 +86,7 @@ class EditPane(Gtk.Notebook):
                 Gtk.FileChooserAction.SAVE,
                 (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                 Gtk.STOCK_SAVE, Gtk.ResponseType.ACCEPT))
+            dialog.set_current_folder(self.workspace.root_dir)
             res = dialog.run()
             if res == Gtk.ResponseType.ACCEPT:
                 tab = Tab(tab.src_view, tab.buffer, dialog.get_filename())

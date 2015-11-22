@@ -4,17 +4,17 @@ import json
 import os.path
 
 class Workspace(object):
-    def __init__(self, workspace_dir='.workspace'):
+    def __init__(self, workspace_dir):
         self.workspace_dir = os.path.abspath(workspace_dir)
         self.files = set()
         self.file_listeners = []
         self.config = {}
         
-        self.reload_file_list()
         self._load_config()
+        self.reload_file_list()
         
     def reload_file_list(self):
-        root = os.path.dirname(self.workspace_dir)
+        root = self.root_dir
         new_files = set()
         
         def file_visitor(arg, dirname, names):
@@ -42,7 +42,7 @@ class Workspace(object):
             pass
             
     def _write_config(self):
-        if not os.path.exists(self.workspace_dir):
+        if not os.path.isdir(self.workspace_dir):
             # no workspace dir -> no saving
             return
         with open(os.path.join(self.workspace_dir, 'config'), 'w') as f:
@@ -56,6 +56,11 @@ class Workspace(object):
     def open_files(self, files):
         self.config['open_files'] = files
         self._write_config()
+        
+    @property
+    def root_dir(self):
+        return self.config.get(
+            'root_dir', os.path.dirname(self.workspace_dir))
             
 import tempfile
 import unittest
@@ -66,6 +71,7 @@ class WorkspaceTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
         self.ws = os.path.join(self.temp_dir, '.workspace')
+        self.alt_ws = None
         open(os.path.join(self.temp_dir, 'foo'), 'w').close()
         os.mkdir(os.path.join(self.temp_dir, 'dir1'))
         open(os.path.join(self.temp_dir, 'dir1', 'file1'), 'w').close()
@@ -74,6 +80,8 @@ class WorkspaceTest(unittest.TestCase):
         
     def tearDown(self):
         shutil.rmtree(self.temp_dir)
+        if self.alt_ws:
+            shutil.rmtree(self.alt_ws)
         
     def assert_default_files(self, workspace):
         self.assertEqual(workspace.files, set([
@@ -83,6 +91,13 @@ class WorkspaceTest(unittest.TestCase):
         
     def test_init(self):
         w = Workspace(self.ws)
+        self.assert_default_files(w)
+        
+    def test_init_remote_workspace(self):
+        self.alt_ws = tempfile.mkdtemp()
+        with open(os.path.join(self.alt_ws, 'config'), 'w') as f:
+            f.write('{"root_dir": "'+self.temp_dir+'"}')
+        w = Workspace(self.alt_ws)
         self.assert_default_files(w)
      
     def test_update(self):
