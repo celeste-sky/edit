@@ -2,6 +2,7 @@
 
 import collections
 from gi.repository import Gtk, GtkSource
+import logging
 import os.path
 
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
@@ -42,7 +43,7 @@ class EditPane(Gtk.Notebook):
                     content = f.read()
             except IOError as e:
                 content = ''
-                print "Couldn't open {}: {}".format(path, e)
+                logging.info("Couldn't open {}: {}".format(path, e))
             
         view = GtkSource.View(
             auto_indent=True, 
@@ -114,7 +115,6 @@ class EditPane(Gtk.Notebook):
         self._update_open_files()
         
 if __name__ == '__main__':  
-    print "hello"
     win = Gtk.Window()
     pane = EditPane()
     pane.open_file("edit.py")
@@ -123,4 +123,4 @@ if __name__ == '__main__':
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
-    
+   

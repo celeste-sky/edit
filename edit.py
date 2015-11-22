@@ -2,6 +2,7 @@
 
 from edit_pane import EditPane
 from gi.repository import Gdk, GObject, Gtk, GtkSource
+import logging
 import signal
 import sys
 from workspace.workspace import Workspace
@@ -78,6 +79,7 @@ class EditWindow(Gtk.Window):
         dialog.destroy()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     win = EditWindow()
     win.connect("delete-event", Gtk.main_quit)
