@@ -32,7 +32,7 @@ class SourceGraph(object):
         
         # Load all the external files
         for p in ext_files.keys():
-            ext_files[p] = graph.file.new_file(p)
+            ext_files[p] = graph.file.new_file(p, external=True)
             if not ext_files[p]:
                 del ext_files[p]
                 

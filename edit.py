@@ -2,6 +2,7 @@
 
 from edit_pane import EditPane
 from gi.repository import Gdk, GObject, Gtk, GtkSource
+from graph.source_graph import SourceGraph
 import logging
 import os.path
 import signal
@@ -91,6 +92,7 @@ if __name__ == '__main__':
         logging.warn(
         'Workspace doesn\'t exist: {}'.format(ws_dir))
     workspace = Workspace(ws_dir)
+    src_graph = SourceGraph(workspace)
         
     win = EditWindow(workspace)
     win.connect("delete-event", Gtk.main_quit)

@@ -40,12 +40,14 @@ def resolve_import(name, finder):
         raise ImportError('Unknown module type: {}'.format(desc[2]))
 
 class PyFile(Node):
-    def __init__(self, path, finder=imp.find_module):
+    def __init__(self, path, finder=imp.find_module, no_load=False):
         super(PyFile, self).__init__()
         self.path = path
         self.finder = finder
         self.imports = set()
-        self._load_imports()
+        
+        if not no_load:
+            self._load_imports()
         
     def _load_imports(self):
         with open(self.path) as f:
@@ -87,9 +89,13 @@ class PyFile(Node):
             self.outgoing.add(e)
             d.incoming.add(e)
         
-def new_file(path):
-    if path.endswith(".py"):
-        return PyFile(path)
+def new_file(path, external=False):
+    if path.endswith('.py'):
+        return PyFile(path, no_load=external)
+    elif path.endswith('.pyc'):
+        return None
+    elif os.path.isdir(path):
+        return None
     else:
         logging.info('Unrecognized file type: {}'.format(path))
         return None            
