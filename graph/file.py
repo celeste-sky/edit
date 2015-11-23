@@ -8,7 +8,12 @@ import imp
 import os.path
 
 def resolve_import(name, finder):
-    if "." in name:
+    if 'os.path' == name:
+        # paper over dynamic import hijinks 
+        return None, [i.replace('.pyc', '.py') for i in [
+            os.__file__, os.path.__file__]]
+        
+    if '.' in name:
         pkg, mod = name.rsplit(".", 1)
         parent, paths = resolve_import(pkg, finder)
     else:
@@ -29,6 +34,8 @@ def resolve_import(name, finder):
         assert pathname
         paths.append(os.path.join(pathname, '__init__.py'))
         return pathname, paths
+    elif desc[2] == imp.C_BUILTIN:
+        return None, paths
     else:
         raise ImportError('Unknown module type: {}'.format(desc[2]))
 
@@ -42,7 +49,11 @@ class PyFile(Node):
         
     def _load_imports(self):
         with open(self.path) as f:
-            tree = ast.parse(f.read())
+            try:
+                tree = ast.parse(f.read())
+            except SyntaxError as e:
+                logging.info("Couldn't parse {}: {}".format(self.path, e))
+                return
             
         parsed = [] #[(name, maybe_not_module), ...]
         for n in ast.walk(tree):
@@ -67,12 +78,25 @@ class PyFile(Node):
                     # name.
                     logging.info('Failed to resolve {}:{}: {}'.format(
                         self.path, name, e))
-        self.imports = new_imports            
+        self.imports = new_imports
+        
+    def visit(self, source_graph):
+        for i in self.imports:
+            d = source_graph.find_file(i)
+            e = edge.Edge(edge.EdgeType.IMPORT, self, d)
+            self.outgoing.add(e)
+            d.incoming.add(e)
+        
+def new_file(path):
+    if path.endswith(".py"):
+        return PyFile(path)
+    else:
+        logging.info('Unrecognized file type: {}'.format(path))
+        return None            
         
 import tempfile
 import unittest
 import shutil
-
 
 def make_finder(modules):
     def res(name, paths):
@@ -128,6 +152,12 @@ class PyFileTest(unittest.TestCase):
         open(self.src, 'w').close()
         p = PyFile(self.src)
         
+    def test_load_malformed(self):
+        with open(self.src, 'w') as f:
+            f.write('invalid python')
+        p = PyFile(self.src, make_finder({}))
+        self.assertEqual(p.imports, set())
+        
     def test_load_import(self):
         with open(self.src, 'w') as f:
             f.write('import root.pkg.mod')
@@ -165,6 +195,6 @@ class PyFileTest(unittest.TestCase):
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
         
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.ERROR)
     unittest.main()
     

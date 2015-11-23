@@ -7,4 +7,4 @@ EdgeType = Namespace(
     IMPORT='import'
 )
 
-Edge = collections.namedtuple('Edge', ['type', 'node'])
+Edge = collections.namedtuple('Edge', ['type', 'source', 'dest'])
