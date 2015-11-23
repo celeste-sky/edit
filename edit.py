@@ -10,11 +10,12 @@ import sys
 from workspace.workspace import Workspace
 
 class EditWindow(Gtk.Window):
-    def __init__(self, workspace):
+    def __init__(self, workspace, src_graph):
         super(EditWindow, self).__init__(
             title="Edit", default_width=600, default_height=800)
         self.workspace = workspace
-        self.edit_pane = EditPane(self, self.workspace)
+        self.src_graph = src_graph
+        self.edit_pane = EditPane(self, self.workspace, self.src_graph)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     workspace = Workspace(ws_dir)
     src_graph = SourceGraph(workspace)
         
-    win = EditWindow(workspace)
+    win = EditWindow(workspace, src_graph)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()

@@ -44,7 +44,7 @@ class SourceGraph(object):
         elif path in self.ext_files:
             return self.ext_files[path]
         else:
-            raise KeyError(path)
+            return None
 
 import os.path            
 import shutil

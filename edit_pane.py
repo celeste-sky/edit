@@ -8,10 +8,11 @@ import os.path
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
-    def __init__(self, root_window, workspace, *args, **kwargs):
+    def __init__(self, root_window, workspace, src_graph, *args, **kwargs):
         super(EditPane, self).__init__(*args, **kwargs)
         self.root_window = root_window
         self.workspace = workspace
+        self.src_graph = src_graph
         self.language_manager = GtkSource.LanguageManager()
         self.tabs = []
         
@@ -50,6 +51,15 @@ class EditPane(Gtk.Notebook):
             insert_spaces_instead_of_tabs=True, 
             tab_width=4, 
             show_line_numbers=True)
+        
+        node = self.src_graph.find_file(path)
+        if node:
+            print '{} outgoing: '.format(path)
+            for e in node.outgoing:
+                print '  ' + e.dest.path
+            print '{} incoming: '.format(path)
+            for e in node.incoming:
+                print '  ' + e.source.path
         
         buf = GtkSource.Buffer()
         if path:
