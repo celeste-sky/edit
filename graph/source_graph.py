@@ -19,9 +19,9 @@ class SourceGraph(object):
         # First, load all the files in the workspace
         files = {}
         for p in self.workspace.files:
-            f = graph.file.new_file(p)
+            f = graph.file.new_file(p, self.workspace)
             if f:
-                logging.debug('Loaded file: {}'.format(p))
+                logging.info('Loaded file: {}'.format(p))
                 files[p] = f
         
         # Now, check each files for imports external to the workspace
@@ -32,7 +32,7 @@ class SourceGraph(object):
         
         # Load all the external files
         for p in ext_files.keys():
-            ext_files[p] = graph.file.new_file(p, external=True)
+            ext_files[p] = graph.file.new_file(p, self.workspace, external=True)
             if not ext_files[p]:
                 del ext_files[p]
                 
@@ -55,11 +55,12 @@ import unittest
 class SourceGraphTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        sys.path.append(self.dir)
         self.ws = os.path.join(self.dir, '.workspace')
+        os.mkdir(self.ws)
+        with open(os.path.join(self.ws, 'config'), 'w') as f:
+            f.write('{"python_path": [ "'+self.dir+'" ] }')
         
     def tearDown(self):
-        sys.path.remove(self.dir)
         shutil.rmtree(self.dir)
         
     def test_src_graph(self):

@@ -83,7 +83,7 @@ class EditWindow(Gtk.Window):
         dialog.destroy()
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     ws_dir = '.workspace'

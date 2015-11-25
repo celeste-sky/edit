@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import json
+import logging
 import os.path
 
 class Workspace(object):
@@ -14,6 +15,7 @@ class Workspace(object):
         self.reload_file_list()
         
     def reload_file_list(self):
+        logging.info("Loading workspace file list")
         root = self.root_dir
         new_files = set()
         
@@ -61,6 +63,10 @@ class Workspace(object):
     def root_dir(self):
         return self.config.get(
             'root_dir', os.path.dirname(self.workspace_dir))
+            
+    @property
+    def python_path(self):
+        return self.config.get('python_path', [])
             
 import tempfile
 import unittest

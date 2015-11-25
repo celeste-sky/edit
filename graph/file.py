@@ -7,7 +7,7 @@ from graph.node import Node
 import imp
 import os.path
 
-def resolve_import(name, finder):
+def resolve_import(name, finder, extra_search):
     if 'os.path' == name:
         # paper over dynamic import hijinks 
         return None, [i.replace('.pyc', '.py') for i in [
@@ -15,14 +15,22 @@ def resolve_import(name, finder):
         
     if '.' in name:
         pkg, mod = name.rsplit(".", 1)
-        parent, paths = resolve_import(pkg, finder)
+        parent, paths = resolve_import(pkg, finder, extra_search)
     else:
         mod = name
         parent = None
         paths = []
     
-    search = [parent] if parent else None
-    f, pathname, desc = finder(mod, search)
+    if parent:
+        f, pathname, desc = finder(mod, [parent])
+    else:
+        try:
+            f, pathname, desc = finder(mod, None)
+        except ImportError:
+            if not extra_search:
+                raise
+            f, pathname, desc = finder(mod, extra_search)
+         
     if f:
         f.close()
     
@@ -40,9 +48,10 @@ def resolve_import(name, finder):
         raise ImportError('Unknown module type: {}'.format(desc[2]))
 
 class PyFile(Node):
-    def __init__(self, path, finder=imp.find_module, no_load=False):
+    def __init__(self, path, workspace, finder=imp.find_module, no_load=False):
         super(PyFile, self).__init__()
         self.path = path
+        self.workspace = workspace
         self.finder = finder
         self.imports = set()
         
@@ -71,7 +80,7 @@ class PyFile(Node):
         new_imports = set() 
         for name, maybe_not_module in parsed:
             try:
-                parent, paths = resolve_import(name, self.finder)
+                parent, paths = resolve_import(name, self.finder, self.workspace.python_path)
                 new_imports.update(set(os.path.abspath(p) for p in paths))
             except ImportError as e:
                 if not maybe_not_module:
@@ -89,17 +98,18 @@ class PyFile(Node):
             self.outgoing.add(e)
             d.incoming.add(e)
         
-def new_file(path, external=False):
+def new_file(path, workspace, external=False):
     if path.endswith('.py'):
-        return PyFile(path, no_load=external)
+        return PyFile(path, workspace, no_load=external)
     elif path.endswith('.pyc'):
         return None
     elif os.path.isdir(path):
         return None
     else:
-        logging.info('Unrecognized file type: {}'.format(path))
+        logging.debug('Unrecognized file type: {}'.format(path))
         return None            
-        
+
+import mock        
 import tempfile
 import unittest
 import shutil
@@ -120,7 +130,7 @@ class ResolveImportTest(unittest.TestCase):
         mock_finder = make_finder({
             ('mod', None): ('mod.py', imp.PY_SOURCE)
         })
-        parent, paths = resolve_import('mod', mock_finder)
+        parent, paths = resolve_import('mod', mock_finder, None)
         self.assertIsNone(parent)
         self.assertEqual(paths, ['mod.py'])
         
@@ -128,7 +138,7 @@ class ResolveImportTest(unittest.TestCase):
         mock_finder = make_finder({
             ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
         })
-        parent, paths = resolve_import('pkg', mock_finder)
+        parent, paths = resolve_import('pkg', mock_finder, None)
         self.assertEqual(parent, 'pkg/')
         self.assertEqual(paths, ['pkg/__init__.py'])
         
@@ -137,7 +147,7 @@ class ResolveImportTest(unittest.TestCase):
             ('mod', ('pkg/',)): ('pkg/mod.py', imp.PY_SOURCE),
             ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
         })
-        parent, paths = resolve_import('pkg.mod', mock_finder)
+        parent, paths = resolve_import('pkg.mod', mock_finder, None)
         self.assertIsNone(parent)
         self.assertEqual(paths, ['pkg/__init__.py', 'pkg/mod.py'])
 
@@ -150,25 +160,27 @@ class PyFileTest(unittest.TestCase):
             ('pkg', ('/root/',)): ('/root/pkg/', imp.PKG_DIRECTORY),
             ('root', None): ('/root/', imp.PKG_DIRECTORY)
         }
+        self.ws = mock.MagicMock()
         
     def tearDown(self):
         shutil.rmtree(self.dir)
         
     def test_load_empty(self):
         open(self.src, 'w').close()
-        p = PyFile(self.src)
+        p = PyFile(self.src, self.ws)
+        self.assertEqual(p.imports, set())
         
     def test_load_malformed(self):
         with open(self.src, 'w') as f:
             f.write('invalid python')
-        p = PyFile(self.src, make_finder({}))
+        p = PyFile(self.src, self.ws, make_finder({}))
         self.assertEqual(p.imports, set())
         
     def test_load_import(self):
         with open(self.src, 'w') as f:
             f.write('import root.pkg.mod')
         mock_finder = make_finder(self.modules)
-        p = PyFile(self.src, mock_finder)
+        p = PyFile(self.src, self.ws, mock_finder)
         self.assertEqual(p.imports, 
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
             
@@ -178,7 +190,7 @@ class PyFileTest(unittest.TestCase):
         self.modules.update({
             ('foo', ('/root/',)): ('/root/foo.py', imp.PY_SOURCE)
         })
-        p = PyFile(self.src, make_finder(self.modules))
+        p = PyFile(self.src, self.ws, make_finder(self.modules))
         self.assertEqual(p.imports,  {
             '/root/__init__.py', 
             '/root/foo.py',
@@ -189,14 +201,14 @@ class PyFileTest(unittest.TestCase):
     def test_load_from_import_nonmod(self):
         with open(self.src, 'w') as f:
             f.write('from root.pkg import Classy')
-        p = PyFile(self.src, make_finder(self.modules))
+        p = PyFile(self.src, self.ws, make_finder(self.modules))
         self.assertEqual(p.imports, 
             {'/root/__init__.py', '/root/pkg/__init__.py'})
             
     def test_load_from_import_mod(self):
         with open(self.src, 'w') as f:
             f.write('from root.pkg import mod')
-        p = PyFile(self.src, make_finder(self.modules))
+        p = PyFile(self.src, self.ws, make_finder(self.modules))
         self.assertEqual(p.imports, 
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
         
