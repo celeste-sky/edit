@@ -81,7 +81,7 @@ class PyFile(Node):
         for name, maybe_not_module in parsed:
             try:
                 parent, paths = resolve_import(name, self.finder, self.workspace.python_path)
-                new_imports.update(set(os.path.abspath(p) for p in paths))
+                new_imports.update(set(os.path.realpath(p) for p in paths))
             except ImportError as e:
                 if not maybe_not_module:
                     # ImportError is not interesting if this is a name in 
@@ -94,6 +94,10 @@ class PyFile(Node):
     def visit(self, source_graph):
         for i in self.imports:
             d = source_graph.find_file(i)
+            if not d:
+                # This happens when python resolves a dependency on a file we
+                # don't understand...
+                continue
             e = edge.Edge(edge.EdgeType.IMPORT, self, d)
             self.outgoing.add(e)
             d.incoming.add(e)

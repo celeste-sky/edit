@@ -21,13 +21,13 @@ class SourceGraph(object):
         for p in self.workspace.files:
             f = graph.file.new_file(p, self.workspace)
             if f:
-                logging.info('Loaded file: {}'.format(p))
+                logging.debug('Loaded file: {}'.format(p))
                 files[p] = f
         
         # Now, check each files for imports external to the workspace
         ext_files = {}
         for f in files.values():
-            ext = f.imports.difference(self.workspace.files)
+            ext = [i for i in f.imports if not i in files]
             ext_files.update({e: None for e in ext})
         
         # Load all the external files
