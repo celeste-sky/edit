@@ -4,11 +4,14 @@
 - C includer/includee
 - find
 - goto line
+- workspace + graph updates
 - cscope declaration / callers / symbols
 - general symbol index
 - user-provided annotations / connections
 - python declaration / callers / symbols
+- inotify
 - multiple cursors
+- drag & drop tabs
 - column ruler 
 - replace
 - highlight current symbol
