@@ -1,4 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+# Copyright 2015 Iain Peet
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 import json
 import logging
@@ -19,16 +25,18 @@ class Workspace(object):
         root = self.root_dir
         new_files = set()
         
-        def file_visitor(arg, dirname, names):
-            for name in list(names):
+        for dirpath, dirnames, filenames in os.walk(root, topdown=True):
+            # don't recurse into hidden dirs
+            for name in list(dirnames):
                 if name.startswith("."):
-                    # skip hidden files.  don't walk down hidden dirs.
-                    names.remove(name)
+                    dirnames.remove(name)
+             
+            for name in dirnames + filenames:
+                if name.startswith("."):
                     continue
-                path = os.path.abspath(os.path.join(dirname, name))
+                path = os.path.realpath(os.path.join(dirpath, name))
                 new_files.add(path)
-                
-        os.path.walk(root, file_visitor, None)
+            
         removed = self.files.difference(new_files)
         added = new_files.difference(self.files)
         self.files = new_files
@@ -70,7 +78,7 @@ class Workspace(object):
             
 import tempfile
 import unittest
-import mock
+import unittest.mock as mock
 import shutil
 
 class WorkspaceTest(unittest.TestCase):
@@ -139,7 +147,7 @@ class WorkspaceTest(unittest.TestCase):
         w.open_files = ['foo', 'bar']        
         with open(os.path.join(self.ws, 'config')) as f:
             self.assertEqual(f.read(), 
-               '{\n    "open_files": [\n        "foo", \n        "bar"\n    ]\n}')
+               '{\n    "open_files": [\n        "foo",\n        "bar"\n    ]\n}')
                
     def test_open_files_read(self):
         os.mkdir(os.path.join(self.ws))

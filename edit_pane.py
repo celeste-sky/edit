@@ -1,4 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+# Copyright 2015 Iain Peet
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 import collections
 from gi.repository import Gtk, GtkSource
@@ -54,12 +60,12 @@ class EditPane(Gtk.Notebook):
         
         node = self.src_graph.find_file(path)
         if node:
-            print '{} outgoing: '.format(path)
+            print('{} outgoing: '.format(path))
             for e in node.outgoing:
-                print '  ' + e.dest.path
-            print '{} incoming: '.format(path)
+                print('  ' + e.dest.path)
+            print('{} incoming: '.format(path))
             for e in node.incoming:
-                print '  ' + e.source.path
+                print('  ' + e.source.path)
         
         buf = GtkSource.Buffer()
         if path:

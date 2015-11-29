@@ -1,4 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
+# Copyright 2015 Iain Peet
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 
 from graph.edge import Edge, EdgeType
 import graph.file
@@ -76,7 +82,7 @@ class SourceGraphTest(unittest.TestCase):
         self.assertEqual(set(sg.files.keys()),
             set(os.path.join(self.dir, f) for f in [
                 'foo.py', 'bar.py', 'baz.py'])) 
-        self.assertEqual(sg.ext_files.keys(), [
+        self.assertEqual(list(sg.ext_files.keys()), [
             shutil.__file__.replace('.pyc', '.py')])
         
         foon = sg.find_file(os.path.join(self.dir, 'foo.py'))
