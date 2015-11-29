@@ -1,14 +1,16 @@
-- dirty close save prompt
 - python importer/importee
+- quick open
+- choose syntax by extension
 - C includer/includee
+- find
+- goto line
 - cscope declaration / callers / symbols
 - general symbol index
+- user-provided annotations / connections
 - python declaration / callers / symbols
-- choose syntax by extension
-- goto line
-- find
-- replace
-- highlight current symbol
-- vim bindings
 - multiple cursors
 - column ruler 
+- replace
+- highlight current symbol
+- dirty close save prompt
+- vim bindings
