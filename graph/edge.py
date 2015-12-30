@@ -10,7 +10,10 @@ from argparse import Namespace
 import collections
 
 EdgeType = Namespace(
-    IMPORT='import'
+    IMPORT='import',
+    DECLARE='declare',
+    REFER='refer',
+    CALL = 'call'
 )
 
 Edge = collections.namedtuple('Edge', ['type', 'source', 'dest'])

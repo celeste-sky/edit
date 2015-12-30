@@ -9,7 +9,7 @@
 import ast
 import logging
 import graph.edge as edge
-from graph.node import Node
+import graph.node as node
 import imp
 import os.path
 
@@ -53,10 +53,9 @@ def resolve_import(name, finder, extra_search):
     else:
         raise ImportError('Unknown module type: {}'.format(desc[2]))
 
-class PyFile(Node):
+class PyFile(node.File):
     def __init__(self, path, workspace, finder=imp.find_module, no_load=False):
-        super(PyFile, self).__init__()
-        self.path = path
+        super(PyFile, self).__init__(path)
         self.workspace = workspace
         self.finder = finder
         self.imports = set()
@@ -72,19 +71,19 @@ class PyFile(Node):
                 logging.info("Couldn't parse {}: {}".format(self.path, e))
                 return
             
-        parsed = [] #[(name, maybe_not_module), ...]
+        parsed_imports = [] #[(name, maybe_not_module), ...]
         for n in ast.walk(tree):
             if isinstance(n, ast.Import):
                 for name in n.names:
-                    parsed.append((name.name, False))
+                    parsed_imports.append((name.name, False))
             if isinstance(n, ast.ImportFrom):
-                parsed.append((n.module, False))
+                parsed_imports.append((n.module, False))
                 for name in n.names:
-                    parsed.append(
+                    parsed_imports.append(
                         ('{}.{}'.format(n.module, name.name), True))
         
         new_imports = set() 
-        for name, maybe_not_module in parsed:
+        for name, maybe_not_module in parsed_imports:
             try:
                 parent, paths = resolve_import(name, self.finder, self.workspace.python_path)
                 new_imports.update(set(os.path.realpath(p) for p in paths))
@@ -95,6 +94,7 @@ class PyFile(Node):
                     # name.
                     logging.info('Failed to resolve {}:{}: {}'.format(
                         self.path, name, e))
+                        
         self.imports = new_imports
         
     def visit(self, source_graph):
