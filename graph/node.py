@@ -16,7 +16,7 @@ class Node(object):
 
 class File(Node):
     def __init__(self, path):
-        super(Function, self).__init__()
+        super(File, self).__init__()
         self.path = path
 
 Location = collections.namedtuple('Location', ['file', 'line', 'column'])
@@ -27,13 +27,13 @@ class Name(Node):
     (variable, function, class, etc.)
     '''
     def __init__(self, name):
-        super(Function, self).__init__()
+        super(Name, self).__init__()
         self.name = name
         # List of Location this name is declared (multiple being expected,
         # considering current lack of any namespace comprehension)
         self.declarations = []
         
- class Function(Name):
+class Function(Name):
     pass
     
 class Variable(Name):

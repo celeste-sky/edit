@@ -58,12 +58,13 @@ class PyFile(node.File):
         super(PyFile, self).__init__(path)
         self.workspace = workspace
         self.finder = finder
-        self.imports = set()
+        self.imports = set() # {'path'}
+        self.functions = [] # [node.Function]
         
         if not no_load:
-            self._load_imports()
+            self._load()
         
-    def _load_imports(self):
+    def _load(self):
         with open(self.path) as f:
             try:
                 tree = ast.parse(f.read())
@@ -72,6 +73,7 @@ class PyFile(node.File):
                 return
             
         parsed_imports = [] #[(name, maybe_not_module), ...]
+        self.functions = []
         for n in ast.walk(tree):
             if isinstance(n, ast.Import):
                 for name in n.names:
@@ -81,6 +83,10 @@ class PyFile(node.File):
                 for name in n.names:
                     parsed_imports.append(
                         ('{}.{}'.format(n.module, name.name), True))
+            if isinstance(n, ast.FunctionDef):
+                f = node.Function(n.name)
+                f.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
+                self.functions.append(f)            
         
         new_imports = set() 
         for name, maybe_not_module in parsed_imports:
@@ -221,6 +227,40 @@ class PyFileTest(unittest.TestCase):
         p = PyFile(self.src, self.ws, make_finder(self.modules))
         self.assertEqual(p.imports, 
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
+            
+    def test_function_def(self):
+        with open(self.src, 'w') as f:
+            f.write('def foo():\n  pass\n')
+        p = PyFile(self.src, self.ws)
+        f, = p.functions
+        self.assertEqual(f.name, 'foo')
+        self.assertEqual(f.declarations, [node.Location(self.src, 1, 0)])
+        
+    def test_nested_function(self):
+        with open(self.src, 'w') as f:
+            f.write('\n'.join([
+                'def foo():',
+                '  def bar():',
+                '    pass',
+                '']))
+        p = PyFile(self.src, self.ws)
+        f1, f2 = p.functions
+        self.assertEqual(f1.name, 'foo')
+        self.assertEqual(f1.declarations, [node.Location(self.src, 1, 0)])
+        self.assertEqual(f2.name, 'bar')
+        self.assertEqual(f2.declarations, [node.Location(self.src, 2, 2)])
+        
+    def test_method(self):
+        with open(self.src, 'w') as f:
+            f.write('\n'.join([
+                'class Foo(object):',
+                '  def foo():',
+                '    pass',
+                '']))
+        p = PyFile(self.src, self.ws)
+        f, = p.functions
+        self.assertEqual(f.name, 'foo')
+        self.assertEqual(f.declarations, [node.Location(self.src, 2, 2)])         
         
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)

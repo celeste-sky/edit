@@ -7,8 +7,11 @@
 - choose syntax by extension
 - goto line
 - find
+- one backspace deletes indent
 - replace
 - highlight current symbol
+- drag & drop tabs
+- indent level cue
 - vim bindings
 - multiple cursors
 - column ruler 
