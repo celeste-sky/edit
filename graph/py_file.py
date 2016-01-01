@@ -60,6 +60,7 @@ class PyFile(node.File):
         self.finder = finder
         self.imports = set() # {'path'}
         self.functions = [] # [node.Function]
+        self.classes = [] # [node.Class]
         
         if not no_load:
             self._load()
@@ -86,7 +87,11 @@ class PyFile(node.File):
             if isinstance(n, ast.FunctionDef):
                 f = node.Function(n.name)
                 f.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
-                self.functions.append(f)            
+                self.functions.append(f)
+            if isinstance(n, ast.ClassDef):
+                c = node.Class(n.name)
+                c.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
+                self.classes.append(c)     
         
         new_imports = set() 
         for name, maybe_not_module in parsed_imports:
@@ -260,7 +265,15 @@ class PyFileTest(unittest.TestCase):
         p = PyFile(self.src, self.ws)
         f, = p.functions
         self.assertEqual(f.name, 'foo')
-        self.assertEqual(f.declarations, [node.Location(self.src, 2, 2)])         
+        self.assertEqual(f.declarations, [node.Location(self.src, 2, 2)])
+        
+    def test_class(self):
+        with open(self.src, 'w') as f:
+            f.write('class Foo(object):\n  pass\n')
+        p = PyFile(self.src, self.ws)
+        c, = p.classes
+        self.assertEqual(c.name, 'Foo')
+        self.assertEqual(c.declarations, [node.Location(self.src, 1, 0)])        
         
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
