@@ -61,6 +61,7 @@ class PyFile(node.File):
         self.imports = set() # {'path'}
         self.functions = [] # [node.Function]
         self.classes = [] # [node.Class]
+        self.calls = [] # [node.Call]
         
         if not no_load:
             self._load()
@@ -91,7 +92,9 @@ class PyFile(node.File):
             if isinstance(n, ast.ClassDef):
                 c = node.Class(n.name)
                 c.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
-                self.classes.append(c)     
+                self.classes.append(c)
+            if isinstance(n, ast.Call):
+                self._load_call(n)    
         
         new_imports = set() 
         for name, maybe_not_module in parsed_imports:
@@ -107,6 +110,21 @@ class PyFile(node.File):
                         self.path, name, e))
                         
         self.imports = new_imports
+        
+    def _load_call(self, call):
+        # The most common cases are going to be calls of a name ("foo()") or
+        # an attr ("obj.foo()").  Of course, the func could be any expression, but
+        # won't attempt to do anything with the more obscure cases for now.
+        # XXX this call will also be duplicated as a Reference, which is annoying,
+        # and needs a less stupid ast walker to fix.
+        if isinstance(call.func, ast.Name):
+            c = node.Call(call.func.id)
+        elif isinstance(call.func, ast.Attribute):
+            c = node.Call(call.func.attr)
+        else:
+            return
+        c.declarations = [node.Location(self.path, call.lineno, call.col_offset)]
+        self.calls.append(c)
         
     def visit(self, source_graph):
         for i in self.imports:
@@ -273,7 +291,27 @@ class PyFileTest(unittest.TestCase):
         p = PyFile(self.src, self.ws)
         c, = p.classes
         self.assertEqual(c.name, 'Foo')
-        self.assertEqual(c.declarations, [node.Location(self.src, 1, 0)])        
+        self.assertEqual(c.declarations, [node.Location(self.src, 1, 0)])
+        
+    def test_call_name(self):
+        with open(self.src, 'w') as f:
+            f.write('foo("bar", 42)')
+        p = PyFile(self.src, self.ws)
+        c, = p.calls
+        self.assertEqual(c.name, 'foo')
+        
+    def test_call_attr(self):
+        with open(self.src, 'w') as f:
+            f.write('foo.bar.baz(1, 2, 3)')
+        p = PyFile(self.src, self.ws)
+        c, = p.calls
+        self.assertEqual(c.name, 'baz')
+        
+    def test_call_dict_item(self):
+        with open(self.src, 'w') as f:
+            f.write('dict["key"](42)')
+        p = PyFile(self.src, self.ws)
+        self.assertEqual(p.calls, [])       
         
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
