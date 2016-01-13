@@ -1,24 +1,26 @@
+Code Comprehension
 - python importer/importee
-- quick open
-- choose syntax by extension
+- python declaration / callers / symbols
 - C includer/includee
-- find
-- goto line
 - workspace + graph updates
 - cscope declaration / callers / symbols
 - general symbol index
 - user-provided annotations / connections
-- python declaration / callers / symbols
-- choose syntax by extension
-- inotify
-- multiple cursors
-- drag & drop tabs
-- column ruler 
-- replace
+
+Editing UI
+- find
+- goto line
 - one backspace deletes indent
+- highlight current symbol
+- multiple cursors
+- inotify
+- column ruler 
 - indent level cue
-- highlight current symbol
-- dirty close save prompt
-- highlight current symbol
-- drag & drop tabs
+- replace
 - vim bindings
+
+Other UI
+- quick open
+- choose syntax by extension
+- drag & drop tabs
+- dirty close save prompt
