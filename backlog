@@ -9,11 +9,16 @@
 - general symbol index
 - user-provided annotations / connections
 - python declaration / callers / symbols
+- choose syntax by extension
 - inotify
 - multiple cursors
 - drag & drop tabs
 - column ruler 
 - replace
+- one backspace deletes indent
+- indent level cue
 - highlight current symbol
 - dirty close save prompt
+- highlight current symbol
+- drag & drop tabs
 - vim bindings

@@ -7,7 +7,7 @@
 # (at your option) any later version.
 
 from graph.edge import Edge, EdgeType
-import graph.file
+import graph.py_file
 import logging
 import workspace.workspace as workspace
 
@@ -25,7 +25,7 @@ class SourceGraph(object):
         # First, load all the files in the workspace
         files = {}
         for p in self.workspace.files:
-            f = graph.file.new_file(p, self.workspace)
+            f = graph.py_file.new_file(p, self.workspace)
             if f:
                 logging.debug('Loaded file: {}'.format(p))
                 files[p] = f
@@ -38,7 +38,7 @@ class SourceGraph(object):
         
         # Load all the external files
         for p in ext_files.keys():
-            ext_files[p] = graph.file.new_file(p, self.workspace, external=True)
+            ext_files[p] = graph.py_file.new_file(p, self.workspace, external=True)
             if not ext_files[p]:
                 del ext_files[p]
                 
