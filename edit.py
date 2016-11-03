@@ -6,6 +6,10 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('GtkSource', '3.0')
+
 from gi.repository import Gtk
 from graph.source_graph import SourceGraph
 import logging
