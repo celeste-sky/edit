@@ -56,12 +56,18 @@ class QuickOpen(Gtk.VBox):
         
     def on_entry_changed(self, widget):
         self.filter.refilter()
+    
+    def to_abs(self, path):
+        # Translates shortened paths back to abs paths
+        if not os.path.isabs(path):
+            return os.path.join(self.workspace.root_dir, path)
+        return path
         
     def on_activate_entry(self, widget):
-        self.emit('file_selected', self.entry.get_text())
+        self.emit('file_selected', self.to_abs(self.entry.get_text()))
         
     def on_activate_row(self, widget, iterator, column):
-        self.emit('file_selected', self.filter[iterator][0])
+        self.emit('file_selected', self.to_abs(self.filter[iterator][0]))
         
 import unittest.mock as mock
 
