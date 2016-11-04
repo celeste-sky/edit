@@ -8,6 +8,8 @@
 
 from gi.repository import Gtk, GObject
 
+import os.path
+
 class QuickOpen(Gtk.VBox):
     __gsignals__ = {
         'file_selected': (GObject.SIGNAL_ACTION, None, (str,))
@@ -23,8 +25,9 @@ class QuickOpen(Gtk.VBox):
         
         self.tree_view = Gtk.TreeView(headers_visible=False)
         self.list_store = Gtk.ListStore(str)
-        for f in self.workspace.files:
-            self.list_store.append([f])
+        for f in sorted(self.workspace.files):
+            if not os.path.isdir(f):
+                self.list_store.append([f])
         self.filter = self.list_store.filter_new()
         self.filter.set_visible_func(self.file_filter)
         self.tree_view.set_model(self.filter)
