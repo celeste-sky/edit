@@ -28,11 +28,11 @@ class Workspace(object):
         for dirpath, dirnames, filenames in os.walk(root, topdown=True):
             # don't recurse into hidden dirs
             for name in list(dirnames):
-                if name.startswith("."):
+                if name.startswith(".") or (name in self.exclude_files):
                     dirnames.remove(name)
              
             for name in dirnames + filenames:
-                if name.startswith("."):
+                if name.startswith(".") or (name in self.exclude_files):
                     continue
                 path = os.path.realpath(os.path.join(dirpath, name))
                 new_files.add(path)
@@ -75,6 +75,10 @@ class Workspace(object):
     @property
     def python_path(self):
         return self.config.get('python_path', [])
+        
+    @property
+    def exclude_files(self):
+        return self.config.get('exclude_files', [])
             
 import tempfile
 import unittest
@@ -113,6 +117,16 @@ class WorkspaceTest(unittest.TestCase):
             f.write('{"root_dir": "'+self.temp_dir+'"}')
         w = Workspace(self.alt_ws)
         self.assert_default_files(w)
+        
+    def test_exclude_files(self):
+        os.mkdir(self.ws)
+        with open(os.path.join(self.ws, 'config'), 'w') as f:
+            f.write('{"exclude_files": ["dir2"]}')
+        w = Workspace(self.ws)
+        self.assertEqual(w.files, set([
+            os.path.join(self.temp_dir, n) for n in [
+                'foo', 'dir1', 'dir1/file1'
+            ]]))
      
     def test_update(self):
         w = Workspace(self.ws)
