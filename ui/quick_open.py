@@ -23,7 +23,7 @@ class QuickOpen(Gtk.VBox):
         
         self.tree_view = Gtk.TreeView(headers_visible=False)
         self.list_store = Gtk.ListStore(str)
-        for f in ws.files:
+        for f in self.workspace.files:
             self.list_store.append([f])
         self.filter = self.list_store.filter_new()
         self.filter.set_visible_func(self.file_filter)
@@ -69,3 +69,4 @@ if __name__ == '__main__':
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+    

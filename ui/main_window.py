@@ -8,6 +8,7 @@
 
 from gi.repository import Gdk, GObject, Gtk
 from ui.edit_pane import EditPane
+from ui.quick_open import QuickOpen
 
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
@@ -16,15 +17,20 @@ class MainWindow(Gtk.Window):
         self.workspace = workspace
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
+        self.quick_open = QuickOpen(self.workspace)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
         self.menu_bar = Gtk.MenuBar()
         self._build_menus()
 
+        self.hbox = Gtk.HBox()
+        self.hbox.pack_start(self.edit_pane, True, True, 0)
+        self.hbox.pack_start(self.quick_open, False, False, 0)
+        
         self.vbox = Gtk.VBox()
         self.vbox.pack_start(self.menu_bar, False, False, 0)
-        self.vbox.pack_start(self.edit_pane, True, True, 0)
+        self.vbox.pack_start(self.hbox, True, True, 0)
         self.add(self.vbox)
         
     def _build_menus(self):
