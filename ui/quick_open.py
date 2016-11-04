@@ -25,8 +25,7 @@ class QuickOpen(Gtk.VBox):
         
         self.tree_view = Gtk.TreeView(headers_visible=False)
         self.list_store = Gtk.ListStore(str)
-        for f in sorted(self.workspace.files):
-            if not os.path.isdir(f):
+        for f in self._prettify_files():
                 self.list_store.append([f])
         self.filter = self.list_store.filter_new()
         self.filter.set_visible_func(self.file_filter)
@@ -35,6 +34,17 @@ class QuickOpen(Gtk.VBox):
             'Filename', Gtk.CellRendererText(), text=0))
         self.tree_view.connect('row-activated', self.on_activate_row)
         self.pack_start(self.tree_view, expand=True, fill=True, padding=0)
+    
+    def _prettify_files(self):
+        # Sorts, removes dirs, makes paths relative.
+        res = []
+        abs_root_dir = os.path.abspath(self.workspace.root_dir)
+        for f in sorted(self.workspace.files):
+            if not os.path.isdir(f):
+                if f.startswith(abs_root_dir):
+                    f = f[len(abs_root_dir)+1:]
+                res.append(f)
+        return res
         
     def file_filter(self, model, iterator, data):
         search = self.entry.get_text()
