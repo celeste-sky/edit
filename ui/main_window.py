@@ -35,9 +35,12 @@ class MainWindow(Gtk.Window):
             lambda _w, p: self.edit_pane.open_file(p))
         self.right_nav.pack_start(self.outgoing_edges, expand=True, fill=True, padding=0)
         self.outgoing_edges.set_current_node(
-            self.src_graph.find_file('/home/iain/git/edit/ui/main_window.py'))
+            self.src_graph.find_file(self.edit_pane.get_current_path()))
         self.outgoing_edges.connect('location_selected',
             lambda _w, l: self.edit_pane.open_file(l))
+        self.edit_pane.connect('switch-file', 
+            lambda _w, p: self.outgoing_edges.set_current_node(
+                self.src_graph.find_file(p)))
 
         # hbox lays our edit pane with navigation panels on sides
         self.hbox = Gtk.HBox()

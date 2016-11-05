@@ -43,6 +43,9 @@ class EditPane(Gtk.Notebook):
     def open_file(self, path=None):
         self._open_file(path)
         self._update_open_files()
+        
+    def get_current_path(self):
+        return self.tabs[self.get_current_page()].path
     
     def _update_open_files(self):
         self.workspace.open_files = [i.path for i in self.tabs if i.path]
