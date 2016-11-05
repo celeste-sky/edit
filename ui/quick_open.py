@@ -79,6 +79,7 @@ import unittest.mock as mock
 if __name__ == '__main__':
     win = Gtk.Window()
     ws = mock.MagicMock()
+    ws.root_dir = ''
     ws.files = [
         'foo.py', 
         'bar.py', 

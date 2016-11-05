@@ -11,6 +11,7 @@ Editing UI
 - find
 - goto line
 - one backspace deletes indent
+- multiple columns
 - highlight current symbol
 - multiple cursors
 - inotify
