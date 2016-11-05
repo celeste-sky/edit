@@ -31,6 +31,9 @@ class EdgeView(Gtk.VBox):
         self.edge_type = edge_type
         self.cur_node = None
         
+        self.label = Gtk.Label('Edges: '+edge_type)
+        self.pack_start(self.label, expand=False, fill=False, padding=0)
+        
         self.tree_view = Gtk.TreeView(headers_visible=False)
         self.list_store = Gtk.ListStore(str)
         self.tree_view.set_model(self.list_store)
@@ -48,10 +51,10 @@ class EdgeView(Gtk.VBox):
         
     def on_activate_entry(self, widget):
         # XXX cheesy assumption text is a path:
-        self.emit('location_selected', node.Location(self.entry.get_text(), 0, 0))
+        self.emit('location_selected', self.entry.get_text())
         
     def on_activate_row(self, widget, iterator, column):
-        self.emit('location_selected', node.Location(self.list_store[iterator][0], 0, 0))
+        self.emit('location_selected', self.list_store[iterator][0])
         
 import unittest.mock as mock
 

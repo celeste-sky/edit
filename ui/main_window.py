@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 from gi.repository import Gdk, GObject, Gtk
+from ui.edge_view import EdgeView
 from ui.edit_pane import EditPane
 from ui.quick_open import QuickOpen
 
@@ -18,19 +19,33 @@ class MainWindow(Gtk.Window):
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
         self.quick_open = QuickOpen(self.workspace)
+        self.outgoing_edges = EdgeView(EdgeView.OUTGOING)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
         self.menu_bar = Gtk.MenuBar()
         self._build_menus()
+        self._build_layout()
 
-        self.hbox = Gtk.HBox()
-        self.hbox.pack_start(self.edit_pane, True, True, 0)
-        self.hbox.pack_start(self.quick_open, False, False, 0)
+    def _build_layout(self):
+        # right nav vbox
+        self.right_nav = Gtk.VBox()
+        self.right_nav.pack_start(self.quick_open, expand=True, fill=True, padding=0)
         self.quick_open.connect('file_selected', 
             lambda _w, p: self.edit_pane.open_file(p))
+        self.right_nav.pack_start(self.outgoing_edges, expand=True, fill=True, padding=0)
+        self.outgoing_edges.set_current_node(
+            self.src_graph.find_file('/home/iain/git/edit/ui/main_window.py'))
+        self.outgoing_edges.connect('location_selected',
+            lambda _w, l: self.edit_pane.open_file(l))
+
+        # hbox lays our edit pane with navigation panels on sides
+        self.hbox = Gtk.HBox()
+        self.hbox.pack_start(self.edit_pane, True, True, 0)
+        self.hbox.pack_start(self.right_nav, False, False, 0)
         self.quick_open.register_accelerators(self.accelerators)
         
+        # Top level vbox adds menubar
         self.vbox = Gtk.VBox()
         self.vbox.pack_start(self.menu_bar, False, False, 0)
         self.vbox.pack_start(self.hbox, True, True, 0)
