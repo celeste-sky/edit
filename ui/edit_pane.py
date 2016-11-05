@@ -7,13 +7,17 @@
 # (at your option) any later version.
 
 import collections
-from gi.repository import Gtk, GtkSource
+from gi.repository import Gtk, GObject, GtkSource
 import logging
 import os.path
 
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
+    __gsignals__ = {
+        'switch-file': (GObject.SIGNAL_ACTION, None, (str,))
+    }
+    
     def __init__(self, root_window, workspace, src_graph, *args, **kwargs):
         super(EditPane, self).__init__(*args, **kwargs)
         self.root_window = root_window
@@ -21,6 +25,7 @@ class EditPane(Gtk.Notebook):
         self.src_graph = src_graph
         self.language_manager = GtkSource.LanguageManager()
         self.tabs = []
+        self.connect('switch-page', self.change_page_handler)
         
         for path in self.workspace.open_files:
             self._open_file(path)
@@ -131,13 +136,28 @@ class EditPane(Gtk.Notebook):
         del self.tabs[current]
         self._update_open_files()
         
-if __name__ == '__main__':  
+    def change_page_handler(self, _widget, _page, index):
+        if self.tabs[index].path is not None:
+            self.emit('switch-file', self.tabs[index].path)
+
+def sandbox():
+    import unittest.mock as mock
+    ws = mock.MagicMock()
+    ws.open_files = []
+    ws.root_dir = '.'
+    graph = mock.MagicMock()
+    graph.find_file.return_value = None
+    
     win = Gtk.Window()
-    pane = EditPane()
+    pane = EditPane(win, ws, graph)
+    pane.connect('switch-file', lambda _w, p: print('select '+p))
     pane.open_file("edit.py")
-    pane.open_file("edit_pane.py")
+    pane.open_file("ui/edit_pane.py")
     win.add(pane)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+
+if __name__ == '__main__':  
+    sandbox()
    
