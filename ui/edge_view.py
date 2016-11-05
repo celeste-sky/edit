@@ -45,9 +45,15 @@ class EdgeView(Gtk.VBox):
     def set_current_node(self, node):
         self.list_store.clear()
         self.cur_node = node
+        if not node:
+            # There may not be a node for the current loc
+            return
         for e in getattr(self.cur_node, self.edge_type):
             # XXX cheesy assumption edge is an import:
-            self.list_store.append([e.dest.path])
+            if self.edge_type is self.OUTGOING:
+                self.list_store.append([e.dest.path])
+            elif self.edge_type is self.INCOMING:
+                self.list_store.append([e.source.path])
         
     def on_activate_entry(self, widget):
         # XXX cheesy assumption text is a path:

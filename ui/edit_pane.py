@@ -66,15 +66,6 @@ class EditPane(Gtk.Notebook):
             tab_width=4, 
             show_line_numbers=True)
         
-        node = self.src_graph.find_file(path)
-        if node:
-            print('{} outgoing: '.format(path))
-            for e in node.outgoing:
-                print('  ' + e.dest.path)
-            print('{} incoming: '.format(path))
-            for e in node.incoming:
-                print('  ' + e.source.path)
-        
         buf = GtkSource.Buffer()
         if path:
             buf.set_text(content)

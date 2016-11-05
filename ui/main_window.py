@@ -14,33 +14,27 @@ from ui.quick_open import QuickOpen
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
         super(MainWindow, self).__init__(
-            title="Edit", default_width=600, default_height=800)
+            title="Edit", default_width=800, default_height=800)
         self.workspace = workspace
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
         self.quick_open = QuickOpen(self.workspace)
         self.outgoing_edges = EdgeView(EdgeView.OUTGOING)
+        self.incoming_edges = EdgeView(EdgeView.INCOMING)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
         self.menu_bar = Gtk.MenuBar()
         self._build_menus()
         self._build_layout()
+        self._connect_widgets()
 
     def _build_layout(self):
         # right nav vbox
         self.right_nav = Gtk.VBox()
         self.right_nav.pack_start(self.quick_open, expand=True, fill=True, padding=0)
-        self.quick_open.connect('file_selected', 
-            lambda _w, p: self.edit_pane.open_file(p))
         self.right_nav.pack_start(self.outgoing_edges, expand=True, fill=True, padding=0)
-        self.outgoing_edges.set_current_node(
-            self.src_graph.find_file(self.edit_pane.get_current_path()))
-        self.outgoing_edges.connect('location_selected',
-            lambda _w, l: self.edit_pane.open_file(l))
-        self.edit_pane.connect('switch-file', 
-            lambda _w, p: self.outgoing_edges.set_current_node(
-                self.src_graph.find_file(p)))
+        self.right_nav.pack_start(self.incoming_edges, expand=True, fill=True, padding=0)
 
         # hbox lays our edit pane with navigation panels on sides
         self.hbox = Gtk.HBox()
@@ -53,6 +47,27 @@ class MainWindow(Gtk.Window):
         self.vbox.pack_start(self.menu_bar, False, False, 0)
         self.vbox.pack_start(self.hbox, True, True, 0)
         self.add(self.vbox)
+        
+    def _connect_widgets(self):      
+        self.quick_open.connect('file_selected', 
+            lambda _w, p: self.edit_pane.open_file(p))
+            
+        self.outgoing_edges.set_current_node(
+            self.src_graph.find_file(self.edit_pane.get_current_path()))
+        self.outgoing_edges.connect('location_selected',
+            lambda _w, l: self.edit_pane.open_file(l))
+            
+        self.incoming_edges.set_current_node(
+            self.src_graph.find_file(self.edit_pane.get_current_path()))
+        self.incoming_edges.connect('location_selected',
+            lambda _w, l: self.edit_pane.open_file(l))
+            
+        self.edit_pane.connect('switch-file', 
+            lambda _w, p: self.outgoing_edges.set_current_node(
+                self.src_graph.find_file(p)))
+        self.edit_pane.connect('switch-file',
+            lambda _w, p: self.incoming_edges.set_current_node(
+                self.src_graph.find_file(p)))
         
     def _build_menus(self):
         file_menu_item = Gtk.MenuItem(label="File")
