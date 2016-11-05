@@ -18,7 +18,7 @@ class QuickOpen(Gtk.VBox):
     def __init__(self, workspace):
         super(QuickOpen, self).__init__()
         self.workspace = workspace
-        self.entry = Gtk.Entry(placeholder_text='Quick Open')
+        self.entry = Gtk.Entry(placeholder_text='Quick Open (Ctrl+P)')
         self.entry.connect('changed', self.on_entry_changed)
         self.entry.connect('activate', self.on_activate_entry)
         self.pack_start(self.entry, expand=False, fill=False, padding=0)
@@ -53,6 +53,11 @@ class QuickOpen(Gtk.VBox):
         if search == '*':
             return True
         return search in model[iterator][0]
+        
+    def register_accelerators(self, accel_group):
+        key, mod = Gtk.accelerator_parse("<Control>p")
+        self.entry.add_accelerator(
+            "grab-focus", accel_group, key, mod, Gtk.AccelFlags.VISIBLE)
         
     def on_entry_changed(self, widget):
         self.filter.refilter()

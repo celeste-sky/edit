@@ -29,6 +29,7 @@ class MainWindow(Gtk.Window):
         self.hbox.pack_start(self.quick_open, False, False, 0)
         self.quick_open.connect('file_selected', 
             lambda _w, p: self.edit_pane.open_file(p))
+        self.quick_open.register_accelerators(self.accelerators)
         
         self.vbox = Gtk.VBox()
         self.vbox.pack_start(self.menu_bar, False, False, 0)
