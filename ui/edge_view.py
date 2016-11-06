@@ -11,7 +11,6 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GObject
 
 import graph.node as node
-
 import os.path
 
 class EdgeView(Gtk.VBox):        
