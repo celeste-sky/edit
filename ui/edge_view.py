@@ -12,6 +12,8 @@ from gi.repository import Gtk, GObject
 
 import graph.node as node
 import os.path
+from ui.wrappers import UILocation
+from workspace.path import Path
 
 class EdgeView(Gtk.VBox):        
     '''
@@ -22,13 +24,14 @@ class EdgeView(Gtk.VBox):
     INCOMING = "incoming"
     
     __gsignals__ = {
-        'location_selected': (GObject.SIGNAL_ACTION, None, (str,))
+        'location-selected': (GObject.SIGNAL_ACTION, None, (UILocation,))
     }
     
-    def __init__(self, edge_type):
+    def __init__(self, edge_type, root_dir):
         super(EdgeView, self).__init__()
         self.edge_type = edge_type
         self.cur_node = None
+        self.root_dir = root_dir # XXX ideally this would not be needed
         
         self.label = Gtk.Label('Edges: '+edge_type)
         self.pack_start(self.label, expand=False, fill=False, padding=0)
@@ -61,10 +64,12 @@ class EdgeView(Gtk.VBox):
         
     def on_activate_entry(self, widget):
         # XXX cheesy assumption text is a path:
-        self.emit('location_selected', self.entry.get_text())
+        self.emit('location-selected', UILocation(node.Location(
+            Path(self.entry.get_text(), self.root_dir), 0, 0)))
         
     def on_activate_row(self, widget, iterator, column):
-        self.emit('location_selected', self.list_store[iterator][0])
+        self.emit('location-selected', UILocation(node.Location(
+            Path(self.list_store[iterator][0], self.root_dir), 0, 0)))
 
 def sandbox():        
     import unittest.mock as mock
@@ -79,7 +84,7 @@ def sandbox():
         n.outgoing.append(e)
         
     edge_view = EdgeView(EdgeView.OUTGOING)
-    edge_view.connect('location_selected', lambda w, f: print('select '+f))
+    edge_view.connect('location-selected', lambda w, f: print('select '+f))
     edge_view.set_current_node(n)
     win.add(edge_view)
     win.connect("delete-event", Gtk.main_quit)

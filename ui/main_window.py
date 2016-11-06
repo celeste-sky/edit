@@ -20,8 +20,10 @@ class MainWindow(Gtk.Window):
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
         self.quick_open = QuickOpen(self.workspace)
-        self.outgoing_edges = EdgeView(EdgeView.OUTGOING)
-        self.incoming_edges = EdgeView(EdgeView.INCOMING)
+        self.outgoing_edges = EdgeView(
+            EdgeView.OUTGOING, self.workspace.root_dir)
+        self.incoming_edges = EdgeView(
+            EdgeView.INCOMING, self.workspace.root_dir)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
@@ -58,15 +60,13 @@ class MainWindow(Gtk.Window):
             
         self.outgoing_edges.set_current_node(
             self.src_graph.find_file(self.edit_pane.get_current_path()))
-        self.outgoing_edges.connect('location_selected',
-            lambda _w, l: self.edit_pane.open_file(
-                Path(l, self.workspace.root_dir)))
+        self.outgoing_edges.connect('location-selected',
+            lambda _w, l: self.edit_pane.open_file(l.path))
             
         self.incoming_edges.set_current_node(
             self.src_graph.find_file(self.edit_pane.get_current_path()))
         self.incoming_edges.connect('location_selected',
-            lambda _w, l: self.edit_pane.open_file(
-                Path(l, self.workspace.root_dir)))
+            lambda _w, l: self.edit_pane.open_file(l.path))
             
         self.edit_pane.connect('switch-file', 
             lambda _w, p: self.outgoing_edges.set_current_node(

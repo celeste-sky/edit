@@ -6,18 +6,22 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
+'''
+These classes exist as a bit of a hack to reconcile the desire to pass
+objects from workspace/ and graph/ around in GObject signals with the
+desire to avoid entwining Gtk into those packages.
+'''
+
 from gi.repository import GObject
 
 import os.path
 
 class UILocation(GObject.GObject):
-    '''
-    Mirrors graph.node.Location, but a GObject so it may be sent in a
-    signal.
-    '''
+    'Wrap graph.node.Location in a GObject'
+    
     def __init__(self, location):
         super(UILocation, self).__init__()
-        self.path = location.path
+        self.path = location.file
         self.line = location.line
         self.column = location.column
         
