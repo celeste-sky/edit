@@ -47,12 +47,17 @@ class EdgeView(Gtk.VBox):
         if not node:
             # There may not be a node for the current loc
             return
+            
+        paths = []
         for e in getattr(self.cur_node, self.edge_type):
             # XXX cheesy assumption edge is an import:
             if self.edge_type is self.OUTGOING:
-                self.list_store.append([e.dest.path.shortest])
+                paths.append(e.dest.path)
             elif self.edge_type is self.INCOMING:
-                self.list_store.append([e.source.path.shortest])
+                paths.append(e.source.path)
+        
+        for p in sorted(paths):
+            self.list_store.append([p.shortest])
         
     def on_activate_entry(self, widget):
         # XXX cheesy assumption text is a path:
