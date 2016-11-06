@@ -24,6 +24,10 @@ class UILocation(GObject.GObject):
         self.path = location.file
         self.line = location.line
         self.column = location.column
+    
+    def __repr__(self):
+        return 'UILocation({!r}, {}, {})'.format(
+            self.path, self.line, self.column)        
         
 class UIPath(GObject.GObject):
     'Wrap workspace.path.Path in a GObject'
@@ -31,4 +35,7 @@ class UIPath(GObject.GObject):
     def __init__(self, path):
         super(UIPath, self).__init__()
         self.path = path
+        
+    def __repr__(self):
+        return 'UIPath({!r})'.format(self.path)
         

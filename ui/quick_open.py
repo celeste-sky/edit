@@ -27,8 +27,7 @@ class QuickOpen(Gtk.VBox):
         
         self.tree_view = Gtk.TreeView(headers_visible=False)
         self.list_store = Gtk.ListStore(str)
-        for f in self._prettify_files():
-                self.list_store.append([f])
+        self._add_files_to_store()
         self.filter = self.list_store.filter_new()
         self.filter.set_visible_func(self.file_filter)
         self.tree_view.set_model(self.filter)
@@ -37,14 +36,11 @@ class QuickOpen(Gtk.VBox):
         self.tree_view.connect('row-activated', self.on_activate_row)
         self.pack_start(self.tree_view, expand=True, fill=True, padding=0)
     
-    def _prettify_files(self):
-        # Sorts, removes dirs, makes paths relative.
-        res = []
-        abs_root_dir = os.path.abspath(self.workspace.root_dir)
-        for f in sorted(self.workspace.files):
-            if not os.path.isdir(f.abs):
-                res.append(f.shortest)
-        return res
+    def _add_files_to_store(self):
+        self.paths = sorted([p for p in self.workspace.files if
+            not os.path.isdir(p.abs)])
+        for i, p in enumerate(self.paths):
+            list_iter = self.list_store.append([p.abbreviate(48)])
         
     def file_filter(self, model, iterator, data):
         search = self.entry.get_text()
@@ -52,7 +48,8 @@ class QuickOpen(Gtk.VBox):
             return False
         if search == '*':
             return True
-        return search in model[iterator][0]
+        inx, = model.get_path(iterator).get_indices()
+        return search in self.paths[inx].shortest
         
     def register_accelerators(self, accel_group):
         key, mod = Gtk.accelerator_parse("<Control>p")
@@ -66,9 +63,9 @@ class QuickOpen(Gtk.VBox):
         self.emit('path-selected', UIPath(Path(
             self.entry.get_text(), self.workspace.root_dir)))
         
-    def on_activate_row(self, widget, iterator, column):
-        self.emit('path-selected', UIPath(Path(
-            self.filter[iterator][0], self.workspace.root_dir)))
+    def on_activate_row(self, widget, path, column):
+        inx, = self.filter.convert_path_to_child_path(path).get_indices()
+        self.emit('path-selected', UIPath(self.paths[inx]))
         
 def sandbox():
     import unittest.mock as mock
@@ -86,7 +83,8 @@ def sandbox():
         'other/bat.py'
     ]]
     quick_open = QuickOpen(ws)
-    quick_open.connect('path-selected', lambda w, f: print('select '+f))
+    quick_open.connect('path-selected', 
+        lambda w, f: print('select '+str(f)))
     win.add(quick_open)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
