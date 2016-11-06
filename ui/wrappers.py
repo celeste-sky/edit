@@ -21,3 +21,10 @@ class UILocation(GObject.GObject):
         self.line = location.line
         self.column = location.column
         
+class UIPath(GObject.GOjbect):
+    'Wrap workspace.path.Path in a GObject'
+    
+    def __init__(self, path):
+        super(UIPath, self).__init__()
+        self.path = path        
+        
