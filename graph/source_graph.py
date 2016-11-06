@@ -9,8 +9,8 @@
 from graph.edge import Edge, EdgeType
 import graph.py_file
 import logging
+import workspace
 from workspace.path import Path
-import workspace.workspace as workspace
 
 class SourceGraph(object):
     def __init__(self, workspace):

@@ -17,7 +17,7 @@ import os.path
 import signal
 import sys
 from ui.main_window import MainWindow
-from workspace.workspace import Workspace
+from workspace import Workspace
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
