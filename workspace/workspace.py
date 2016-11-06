@@ -12,7 +12,7 @@ import os.path
 
 # XXX relative import because absolute import doesn't resolve due to
 # this module having the same name as its package.
-from path import Path
+from workspace.path import Path
 
 class Workspace(object):
     def __init__(self, workspace_dir):

@@ -9,6 +9,7 @@
 from graph.edge import Edge, EdgeType
 import graph.py_file
 import logging
+from workspace.path import Path
 import workspace.workspace as workspace
 
 class SourceGraph(object):
@@ -45,6 +46,7 @@ class SourceGraph(object):
         return files, ext_files
     
     def find_file(self, path):
+        assert isinstance(path, Path)
         if path in self.files:
             return self.files[path]
         elif path in self.ext_files:
@@ -80,15 +82,16 @@ class SourceGraphTest(unittest.TestCase):
         sg = SourceGraph(w)
         
         self.assertEqual(set(sg.files.keys()),
-            set(os.path.join(self.dir, f) for f in [
-                'foo.py', 'bar.py', 'baz.py'])) 
-        self.assertEqual(list(sg.ext_files.keys()), [
-            shutil.__file__.replace('.pyc', '.py')])
+            set(Path(f, self.dir) for f in ['foo.py', 'bar.py', 'baz.py'])) 
+        self.assertEqual(
+            list(sg.ext_files.keys()), 
+            [Path(shutil.__file__.replace('.pyc', '.py'), self.dir)])
         
-        foon = sg.find_file(os.path.join(self.dir, 'foo.py'))
-        barn = sg.find_file(os.path.join(self.dir, 'bar.py'))
-        bazn = sg.find_file(os.path.join(self.dir, 'baz.py'))
-        shutiln = sg.find_file(os.path.join(shutil.__file__.replace('.pyc', '.py')))
+        foon = sg.find_file(Path('foo.py', self.dir))
+        barn = sg.find_file(Path('bar.py', self.dir))
+        bazn = sg.find_file(Path( 'baz.py', self.dir))
+        shutiln = sg.find_file(Path(
+            shutil.__file__.replace('.pyc', '.py'), self.dir))
         
         self.assertEqual(foon.outgoing, set([
             Edge(EdgeType.IMPORT, foon, barn),
