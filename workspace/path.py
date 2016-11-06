@@ -21,6 +21,18 @@ class Path(object):
         else:
             self.abs = os.path.join(ws_root, path)
         self._ws_root = ws_root
+        
+    def __repr__(self):
+        return 'Path({!r}, {!r})'.format(self.rel, self._ws_root)
+        
+    def __eq__(self, other):
+        return (self.abs, self._ws_root) == (other.abs, other._ws_root)
+        
+    def __ne__(self, other):
+        return not self.__eq__(other)
+        
+    def __hash__(self):
+        return hash((self.abs, self._ws_root))
            
     @property
     def rel(self):

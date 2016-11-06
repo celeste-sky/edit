@@ -10,6 +10,10 @@ import json
 import logging
 import os.path
 
+# XXX relative import because absolute import doesn't resolve due to
+# this module having the same name as its package.
+from path import Path
+
 class Workspace(object):
     def __init__(self, workspace_dir):
         self.workspace_dir = os.path.abspath(workspace_dir)
@@ -35,7 +39,7 @@ class Workspace(object):
                 if name.startswith(".") or (name in self.exclude_files):
                     continue
                 path = os.path.realpath(os.path.join(dirpath, name))
-                new_files.add(path)
+                new_files.add(Path(path, root))
             
         removed = self.files.difference(new_files)
         added = new_files.difference(self.files)
@@ -60,11 +64,12 @@ class Workspace(object):
     
     @property
     def open_files(self):
-        return self.config.get('open_files', [])
+        return [Path(p, self.root_dir) for p in 
+            self.config.get('open_files', [])]
         
     @open_files.setter
     def open_files(self, files):
-        self.config['open_files'] = files
+        self.config['open_files'] = [p.rel for p in files]
         self._write_config()
         
     @property
@@ -102,10 +107,9 @@ class WorkspaceTest(unittest.TestCase):
             shutil.rmtree(self.alt_ws)
         
     def assert_default_files(self, workspace):
-        self.assertEqual(workspace.files, set([
-            os.path.join(self.temp_dir, n) for n in [
-                'foo', 'dir1', 'dir1/file1', 'dir2', 'dir2/file1'
-            ]]))
+        self.assertEqual(
+            set([p.rel for p in workspace.files]), 
+            set([ 'foo', 'dir1', 'dir1/file1', 'dir2', 'dir2/file1']))
         
     def test_init(self):
         w = Workspace(self.ws)
@@ -123,10 +127,9 @@ class WorkspaceTest(unittest.TestCase):
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"exclude_files": ["dir2"]}')
         w = Workspace(self.ws)
-        self.assertEqual(w.files, set([
-            os.path.join(self.temp_dir, n) for n in [
-                'foo', 'dir1', 'dir1/file1'
-            ]]))
+        self.assertEqual(
+            set([p.rel for p in w.files]), 
+            set([  'foo', 'dir1', 'dir1/file1']))
      
     def test_update(self):
         w = Workspace(self.ws)
@@ -136,8 +139,8 @@ class WorkspaceTest(unittest.TestCase):
         w.file_listeners.append(cb)
         w.reload_file_list()
         cb.assert_called_once_with(
-            set([os.path.join(self.temp_dir, 'dir2', 'file1')]),
-            set([os.path.join(self.temp_dir, 'dir1', 'file2')]))
+            set([Path('dir2/file1', self.temp_dir)]),
+            set([Path('dir1/file2', self.temp_dir)]))
             
     def test_hidden_file(self):
         open(os.path.join(self.temp_dir, '.hidden'), 'w').close()
@@ -152,13 +155,13 @@ class WorkspaceTest(unittest.TestCase):
         
     def test_update_doesnt_create_workspace(self):
         w = Workspace(self.ws)
-        w.open_files = ['foo', 'bar']
+        w.open_files = [Path('foo', self.temp_dir), Path('bar', self.temp_dir)]
         self.assertFalse(os.path.exists(self.ws))
         
     def test_update_open_files_written(self):
         os.mkdir(self.ws)
         w = Workspace(self.ws)
-        w.open_files = ['foo', 'bar']        
+        w.open_files = [Path('foo', self.temp_dir), Path('bar', self.temp_dir)]        
         with open(os.path.join(self.ws, 'config')) as f:
             self.assertEqual(f.read(), 
                '{\n    "open_files": [\n        "foo",\n        "bar"\n    ]\n}')
@@ -168,7 +171,7 @@ class WorkspaceTest(unittest.TestCase):
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"open_files": ["foo", "bar"]}')
         w = Workspace(self.ws)
-        self.assertEqual(w.open_files, ["foo", "bar"])
+        self.assertEqual([p.rel for p in w.open_files], ["foo", "bar"])
         
 if __name__ == '__main__':
     unittest.main()
