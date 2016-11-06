@@ -12,6 +12,7 @@ import graph.edge as edge
 import graph.node as node
 import imp
 import os.path
+from workspace.path import Path
 
 def resolve_import(name, finder, extra_search):
     if 'os.path' == name:
@@ -67,7 +68,7 @@ class PyFile(node.File):
             self._load()
         
     def _load(self):
-        with open(self.path) as f:
+        with open(self.path.abs) as f:
             try:
                 tree = ast.parse(f.read())
             except SyntaxError as e:
@@ -99,8 +100,11 @@ class PyFile(node.File):
         new_imports = set() 
         for name, maybe_not_module in parsed_imports:
             try:
-                parent, paths = resolve_import(name, self.finder, self.workspace.python_path)
-                new_imports.update(set(os.path.realpath(p) for p in paths))
+                parent, paths = resolve_import(
+                    name, self.finder, self.workspace.python_path)
+                new_imports.update(set(
+                    Path(os.path.realpath(p), self.workspace.root_dir) 
+                    for p in paths))
             except ImportError as e:
                 if not maybe_not_module:
                     # ImportError is not interesting if this is a name in 
@@ -138,11 +142,11 @@ class PyFile(node.File):
             d.incoming.add(e)
         
 def new_file(path, workspace, external=False):
-    if path.endswith('.py'):
-        return PyFile(path, workspace, no_load=external)
-    elif path.endswith('.pyc'):
+    if not os.path.isfile(path.abs):
         return None
-    elif os.path.isdir(path):
+    if path.abs.endswith('.py'):
+        return PyFile(path, workspace, no_load=external)
+    elif path.abs.endswith('.pyc'):
         return None
     else:
         logging.debug('Unrecognized file type: {}'.format(path))
@@ -193,7 +197,7 @@ class ResolveImportTest(unittest.TestCase):
 class PyFileTest(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.mkdtemp()
-        self.src = os.path.join(self.dir, 'src.py')
+        self.src = Path('src.py', self.dir)
         self.modules = {
             ('mod', ('/root/pkg/',)): ('/root/pkg/mod.py', imp.PY_SOURCE),
             ('pkg', ('/root/',)): ('/root/pkg/', imp.PKG_DIRECTORY),
@@ -205,32 +209,33 @@ class PyFileTest(unittest.TestCase):
         shutil.rmtree(self.dir)
         
     def test_load_empty(self):
-        open(self.src, 'w').close()
+        open(self.src.abs, 'w').close()
         p = PyFile(self.src, self.ws)
         self.assertEqual(p.imports, set())
         
     def test_load_malformed(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('invalid python')
         p = PyFile(self.src, self.ws, make_finder({}))
         self.assertEqual(p.imports, set())
         
     def test_load_import(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('import root.pkg.mod')
         mock_finder = make_finder(self.modules)
         p = PyFile(self.src, self.ws, mock_finder)
-        self.assertEqual(p.imports, 
+        self.assertEqual(
+            set(i.abs for i in p.imports), 
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
             
     def test_load_multi_import_as(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('import root.foo as f, root.pkg.mod as m')
         self.modules.update({
             ('foo', ('/root/',)): ('/root/foo.py', imp.PY_SOURCE)
         })
         p = PyFile(self.src, self.ws, make_finder(self.modules))
-        self.assertEqual(p.imports,  {
+        self.assertEqual(set(i.abs for i in p.imports),  {
             '/root/__init__.py', 
             '/root/foo.py',
             '/root/pkg/__init__.py', 
@@ -238,21 +243,21 @@ class PyFileTest(unittest.TestCase):
         })
         
     def test_load_from_import_nonmod(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('from root.pkg import Classy')
         p = PyFile(self.src, self.ws, make_finder(self.modules))
-        self.assertEqual(p.imports, 
+        self.assertEqual(set(i.abs for i in p.imports), 
             {'/root/__init__.py', '/root/pkg/__init__.py'})
             
     def test_load_from_import_mod(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('from root.pkg import mod')
         p = PyFile(self.src, self.ws, make_finder(self.modules))
-        self.assertEqual(p.imports, 
+        self.assertEqual(set(i.abs for i in p.imports), 
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
             
     def test_function_def(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('def foo():\n  pass\n')
         p = PyFile(self.src, self.ws)
         f, = p.functions
@@ -260,7 +265,7 @@ class PyFileTest(unittest.TestCase):
         self.assertEqual(f.declarations, [node.Location(self.src, 1, 0)])
         
     def test_nested_function(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('\n'.join([
                 'def foo():',
                 '  def bar():',
@@ -274,7 +279,7 @@ class PyFileTest(unittest.TestCase):
         self.assertEqual(f2.declarations, [node.Location(self.src, 2, 2)])
         
     def test_method(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('\n'.join([
                 'class Foo(object):',
                 '  def foo():',
@@ -286,7 +291,7 @@ class PyFileTest(unittest.TestCase):
         self.assertEqual(f.declarations, [node.Location(self.src, 2, 2)])
         
     def test_class(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('class Foo(object):\n  pass\n')
         p = PyFile(self.src, self.ws)
         c, = p.classes
@@ -294,21 +299,21 @@ class PyFileTest(unittest.TestCase):
         self.assertEqual(c.declarations, [node.Location(self.src, 1, 0)])
         
     def test_call_name(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('foo("bar", 42)')
         p = PyFile(self.src, self.ws)
         c, = p.calls
         self.assertEqual(c.name, 'foo')
         
     def test_call_attr(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('foo.bar.baz(1, 2, 3)')
         p = PyFile(self.src, self.ws)
         c, = p.calls
         self.assertEqual(c.name, 'baz')
         
     def test_call_dict_item(self):
-        with open(self.src, 'w') as f:
+        with open(self.src.abs, 'w') as f:
             f.write('dict["key"](42)')
         p = PyFile(self.src, self.ws)
         self.assertEqual(p.calls, [])       
