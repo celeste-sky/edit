@@ -125,6 +125,7 @@ class MainWindow(Gtk.Window):
         dialog.set_current_folder(self.workspace.root_dir)
         res = dialog.run()
         if res == Gtk.ResponseType.ACCEPT:
-            self.edit_pane.open_file(dialog.get_filename())
+            self.edit_pane.open_file(Path(
+                dialog.get_filename(), self.workspace.root_dir))
         dialog.destroy()
         
