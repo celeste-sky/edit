@@ -53,9 +53,8 @@ class MainWindow(Gtk.Window):
         self.add(self.vbox)
         
     def _connect_widgets(self):      
-        self.quick_open.connect('file_selected', 
-            lambda _w, p: self.edit_pane.open_file(
-                Path(p, self.workspace.root_dir)))
+        self.quick_open.connect('path-selected', 
+            lambda _w, p: self.edit_pane.open_file(p.path))
             
         self.outgoing_edges.set_current_node(
             self.src_graph.find_file(self.edit_pane.get_current_path()))

@@ -9,10 +9,12 @@
 from gi.repository import Gtk, GObject
 
 import os.path
+from ui.wrappers import UIPath
+from workspace.path import Path
 
 class QuickOpen(Gtk.VBox):
     __gsignals__ = {
-        'file_selected': (GObject.SIGNAL_ACTION, None, (str,))
+        'path-selected': (GObject.SIGNAL_ACTION, None, (UIPath,))
     }
     
     def __init__(self, workspace):
@@ -59,18 +61,14 @@ class QuickOpen(Gtk.VBox):
         
     def on_entry_changed(self, widget):
         self.filter.refilter()
-    
-    def to_abs(self, path):
-        # Translates shortened paths back to abs paths
-        if not os.path.isabs(path):
-            return os.path.join(self.workspace.root_dir, path)
-        return path
         
     def on_activate_entry(self, widget):
-        self.emit('file_selected', self.to_abs(self.entry.get_text()))
+        self.emit('path-selected', UIPath(Path(
+            self.entry.get_text(), self.workspace.root_dir)))
         
     def on_activate_row(self, widget, iterator, column):
-        self.emit('file_selected', self.to_abs(self.filter[iterator][0]))
+        self.emit('path-selected', UIPath(Path(
+            self.filter[iterator][0], self.workspace.root_dir)))
         
 def sandbox():
     import unittest.mock as mock
@@ -88,7 +86,7 @@ def sandbox():
         'other/bat.py'
     ]]
     quick_open = QuickOpen(ws)
-    quick_open.connect('file_selected', lambda w, f: print('select '+f))
+    quick_open.connect('path-selected', lambda w, f: print('select '+f))
     win.add(quick_open)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
