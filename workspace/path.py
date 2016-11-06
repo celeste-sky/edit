@@ -17,19 +17,32 @@ class Path(object):
     def __init__(self, path, ws_root):
         super(Path, self).__init__()
         if os.path.isabs(path):
-            self.abs = path
+            self.abs = os.path.realpath(path)
         else:
-            self.abs = os.path.join(ws_root, path)
+            self.abs = os.path.realpath(os.path.join(ws_root, path))
         self._ws_root = ws_root
         
     def __repr__(self):
         return 'Path({!r}, {!r})'.format(self.rel, self._ws_root)
         
     def __eq__(self, other):
-        return (self.abs, self._ws_root) == (other.abs, other._ws_root)
+        return isinstance(other, Path) and \
+            (self.abs, self._ws_root) == (other.abs, other._ws_root)
         
+    def __ge__(self, other):
+        return self.abs >= other.abs
+        
+    def __gt__(self, other):
+        return self.abs > other.abs
+               
     def __ne__(self, other):
         return not self.__eq__(other)
+        
+    def __le__(self, other):
+        return not self.__gt__(other)
+        
+    def __lt__(self, other):
+        return not self.__ge__(other)
         
     def __hash__(self):
         return hash((self.abs, self._ws_root))
@@ -37,6 +50,10 @@ class Path(object):
     @property
     def rel(self):
         return os.path.relpath(self.abs, self._ws_root)
+        
+    @property
+    def shortest(self):
+        return self.rel if len(self.rel) < len(self.abs) else self.abs
         
     @property
     def in_workspace(self):
@@ -51,7 +68,7 @@ class Path(object):
         respected.
         '''
         assert max_len >= 16
-        res = self.rel if len(self.rel)  < len(self.abs) else self.abs
+        res = self.shortest
         if len(res) <= max_len:
             return res
         else:

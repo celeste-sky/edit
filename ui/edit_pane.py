@@ -10,6 +10,7 @@ import collections
 from gi.repository import Gtk, GObject, GtkSource
 import logging
 import os.path
+from workspace.path import Path
 
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
@@ -32,15 +33,13 @@ class EditPane(Gtk.Notebook):
         if not self.workspace.open_files:
             self._open_file(None)
     
-    def _to_display_path(self, abs_path):
-        if not abs_path:
+    def _to_display_path(self, path):
+        if not path:
             return "Unnamed"
-        elif abs_path.startswith(os.path.abspath(self.workspace.root_dir)):
-            return os.path.relpath(abs_path, self.workspace.root_dir)
-        else:
-            return abs_path
+        return path.abbreviate(16)
             
     def open_file(self, path=None):
+        assert (path is None) or isinstance(path, Path)
         for i, t in enumerate(self.tabs):
             if path == t.path:
                 self.set_current_page(i)
@@ -56,9 +55,8 @@ class EditPane(Gtk.Notebook):
              
     def _open_file(self, path):
         if path:
-            path = os.path.abspath(path)
             try:
-                with open(path) as f:
+                with open(path.abs) as f:
                     content = f.read()
             except IOError as e:
                 content = ''
@@ -108,7 +106,8 @@ class EditPane(Gtk.Notebook):
             dialog.set_current_folder(self.workspace.root_dir)
             res = dialog.run()
             if res == Gtk.ResponseType.ACCEPT:
-                tab = Tab(tab.src_view, tab.buffer, dialog.get_filename())
+                tab = Tab(tab.src_view, tab.buffer, 
+                    Path(dialog.get_filename(), self.workspace.root_dir))
                 self.tabs[self.get_current_page()] = tab
                 self._update_open_files()
                 dialog.destroy()
@@ -116,7 +115,7 @@ class EditPane(Gtk.Notebook):
                 dialog.destroy()
                 return
    
-        with open(tab.path, "w") as f:
+        with open(tab.path.abs, "w") as f:
             f.write(tab.buffer.get_text(
                 tab.buffer.get_start_iter(),
                 tab.buffer.get_end_iter(),
@@ -136,7 +135,7 @@ class EditPane(Gtk.Notebook):
         
     def change_page_handler(self, _widget, _page, index):
         if self.tabs[index].path is not None:
-            self.emit('switch-file', self.tabs[index].path)
+            self.emit('switch-file', self.tabs[index].path.abs)
 
 def sandbox():
     import unittest.mock as mock
@@ -149,8 +148,8 @@ def sandbox():
     win = Gtk.Window()
     pane = EditPane(win, ws, graph)
     pane.connect('switch-file', lambda _w, p: print('select '+p))
-    pane.open_file("edit.py")
-    pane.open_file("ui/edit_pane.py")
+    pane.open_file(Path("edit.py", "."))
+    pane.open_file(Path("ui/edit_pane.py", "."))
     win.add(pane)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()

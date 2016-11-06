@@ -10,6 +10,7 @@ from gi.repository import Gdk, GObject, Gtk
 from ui.edge_view import EdgeView
 from ui.edit_pane import EditPane
 from ui.quick_open import QuickOpen
+from workspace.path import Path
 
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
@@ -50,24 +51,27 @@ class MainWindow(Gtk.Window):
         
     def _connect_widgets(self):      
         self.quick_open.connect('file_selected', 
-            lambda _w, p: self.edit_pane.open_file(p))
+            lambda _w, p: self.edit_pane.open_file(
+                Path(p, self.workspace.root_dir)))
             
         self.outgoing_edges.set_current_node(
             self.src_graph.find_file(self.edit_pane.get_current_path()))
         self.outgoing_edges.connect('location_selected',
-            lambda _w, l: self.edit_pane.open_file(l))
+            lambda _w, l: self.edit_pane.open_file(
+                Path(l, self.workspace.root_dir)))
             
         self.incoming_edges.set_current_node(
             self.src_graph.find_file(self.edit_pane.get_current_path()))
         self.incoming_edges.connect('location_selected',
-            lambda _w, l: self.edit_pane.open_file(l))
+            lambda _w, l: self.edit_pane.open_file(
+                Path(l, self.workspace.root_dir)))
             
         self.edit_pane.connect('switch-file', 
             lambda _w, p: self.outgoing_edges.set_current_node(
-                self.src_graph.find_file(p)))
+                self.src_graph.find_file(Path(p, self.workspace.root_dir))))
         self.edit_pane.connect('switch-file',
             lambda _w, p: self.incoming_edges.set_current_node(
-                self.src_graph.find_file(p)))
+                self.src_graph.find_file(Path(p, self.workspace.root_dir))))
         
     def _build_menus(self):
         file_menu_item = Gtk.MenuItem(label="File")

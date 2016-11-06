@@ -40,10 +40,8 @@ class QuickOpen(Gtk.VBox):
         res = []
         abs_root_dir = os.path.abspath(self.workspace.root_dir)
         for f in sorted(self.workspace.files):
-            if not os.path.isdir(f):
-                if f.startswith(abs_root_dir):
-                    f = f[len(abs_root_dir)+1:]
-                res.append(f)
+            if not os.path.isdir(f.abs):
+                res.append(f.shortest)
         return res
         
     def file_filter(self, model, iterator, data):
@@ -74,24 +72,28 @@ class QuickOpen(Gtk.VBox):
     def on_activate_row(self, widget, iterator, column):
         self.emit('file_selected', self.to_abs(self.filter[iterator][0]))
         
-import unittest.mock as mock
-
-if __name__ == '__main__':
+def sandbox():
+    import unittest.mock as mock
+    from workspace.path import Path
+    
     win = Gtk.Window()
     ws = mock.MagicMock()
     ws.root_dir = ''
-    ws.files = [
+    ws.files = [Path(p, '.') for p in [
         'foo.py', 
         'bar.py', 
         'baz.py', 
         'dir/foobar.py', 
         'dir/inner/coffee.py', 
         'other/bat.py'
-    ]
+    ]]
     quick_open = QuickOpen(ws)
     quick_open.connect('file_selected', lambda w, f: print('select '+f))
     win.add(quick_open)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+
+if __name__ == '__main__':
+    sandbox()
     

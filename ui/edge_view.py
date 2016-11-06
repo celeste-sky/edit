@@ -50,9 +50,9 @@ class EdgeView(Gtk.VBox):
         for e in getattr(self.cur_node, self.edge_type):
             # XXX cheesy assumption edge is an import:
             if self.edge_type is self.OUTGOING:
-                self.list_store.append([e.dest.path])
+                self.list_store.append([e.dest.path.shortest])
             elif self.edge_type is self.INCOMING:
-                self.list_store.append([e.source.path])
+                self.list_store.append([e.source.path.shortest])
         
     def on_activate_entry(self, widget):
         # XXX cheesy assumption text is a path:
@@ -60,16 +60,17 @@ class EdgeView(Gtk.VBox):
         
     def on_activate_row(self, widget, iterator, column):
         self.emit('location_selected', self.list_store[iterator][0])
-        
-import unittest.mock as mock
 
-if __name__ == '__main__':
+def sandbox():        
+    import unittest.mock as mock
+    from workspace.path import Path
+
     win = Gtk.Window()
     n = mock.MagicMock()
     n.outgoing = []
     for p in ['foo', 'bar', 'baz']:
         e = mock.MagicMock()
-        e.dest.path = p
+        e.dest.path = Path(p, '.')
         n.outgoing.append(e)
         
     edge_view = EdgeView(EdgeView.OUTGOING)
@@ -79,4 +80,7 @@ if __name__ == '__main__':
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+    
+if __name__ == '__main__':
+    sandbox()
     
