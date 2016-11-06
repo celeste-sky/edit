@@ -33,9 +33,12 @@ class MainWindow(Gtk.Window):
     def _build_layout(self):
         # right nav vbox
         self.right_nav = Gtk.VBox()
-        self.right_nav.pack_start(self.quick_open, expand=True, fill=True, padding=0)
-        self.right_nav.pack_start(self.outgoing_edges, expand=True, fill=True, padding=0)
-        self.right_nav.pack_start(self.incoming_edges, expand=True, fill=True, padding=0)
+        self.right_nav.pack_start(
+            self.quick_open, expand=True, fill=True, padding=0)
+        self.right_nav.pack_start(
+            self.outgoing_edges, expand=True, fill=True, padding=0)
+        self.right_nav.pack_start(
+            self.incoming_edges, expand=True, fill=True, padding=0)
 
         # hbox lays our edit pane with navigation panels on sides
         self.hbox = Gtk.HBox()
@@ -68,10 +71,10 @@ class MainWindow(Gtk.Window):
             
         self.edit_pane.connect('switch-file', 
             lambda _w, p: self.outgoing_edges.set_current_node(
-                self.src_graph.find_file(Path(p, self.workspace.root_dir))))
+                self.src_graph.find_file(p.path)))
         self.edit_pane.connect('switch-file',
             lambda _w, p: self.incoming_edges.set_current_node(
-                self.src_graph.find_file(Path(p, self.workspace.root_dir))))
+                self.src_graph.find_file(p.path)))
         
     def _build_menus(self):
         file_menu_item = Gtk.MenuItem(label="File")

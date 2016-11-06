@@ -10,13 +10,14 @@ import collections
 from gi.repository import Gtk, GObject, GtkSource
 import logging
 import os.path
+from ui.wrappers import UIPath
 from workspace.path import Path
 
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
     __gsignals__ = {
-        'switch-file': (GObject.SIGNAL_ACTION, None, (str,))
+        'switch-file': (GObject.SIGNAL_ACTION, None, (UIPath,))
     }
     
     def __init__(self, root_window, workspace, src_graph, *args, **kwargs):
@@ -135,7 +136,7 @@ class EditPane(Gtk.Notebook):
         
     def change_page_handler(self, _widget, _page, index):
         if self.tabs[index].path is not None:
-            self.emit('switch-file', self.tabs[index].path.abs)
+            self.emit('switch-file', UIPath(self.tabs[index].path))
 
 def sandbox():
     import unittest.mock as mock
