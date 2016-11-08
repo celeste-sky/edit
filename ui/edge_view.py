@@ -31,6 +31,7 @@ class EdgeView(Gtk.VBox):
         super(EdgeView, self).__init__()
         self.edge_type = edge_type
         self.cur_node = None
+        self.edges = []
         self.root_dir = root_dir # XXX ideally this would not be needed
         
         self.label = Gtk.Label('Edges: '+edge_type)
@@ -47,29 +48,37 @@ class EdgeView(Gtk.VBox):
     def set_current_node(self, node):
         self.list_store.clear()
         self.cur_node = node
+        self.edges = []
         if not node:
             # There may not be a node for the current loc
             return
             
-        paths = []
+        # Construct a list of (path, edge) tuples for sorting by path
+        elements = []
         for e in getattr(self.cur_node, self.edge_type):
             # XXX cheesy assumption edge is an import:
             if self.edge_type is self.OUTGOING:
-                paths.append(e.dest.path)
+                elements.append((e.dest.path, e))
             elif self.edge_type is self.INCOMING:
-                paths.append(e.source.path)
+                elements.append((e.source.path, e))
+            else:
+                raise NotImplementedError()
         
-        for p in sorted(paths):
-            self.list_store.append([p.shortest])
+        for p, e in sorted(elements):
+            self.list_store.append([p.abbreviate(48)])
+            self.edges.append(e)
         
-    def on_activate_entry(self, widget):
-        # XXX cheesy assumption text is a path:
-        self.emit('location-selected', UILocation(node.Location(
-            Path(self.entry.get_text(), self.root_dir), 0, 0)))
-        
-    def on_activate_row(self, widget, iterator, column):
-        self.emit('location-selected', UILocation(node.Location(
-            Path(self.list_store[iterator][0], self.root_dir), 0, 0)))
+    def on_activate_row(self, widget, path, column):
+        inx, = path.get_indices()
+        # XXX cheesy assumption edge is an import
+        if self.edge_type is self.OUTGOING:
+            path = self.edges[inx].dest.path
+        elif self.edge_type is self.INCOMING:
+            path = self.edges[inx].source.path
+        else:
+            raise NotImplementedError()
+            
+        self.emit('location-selected', UILocation(node.Location(path, 0, 0)))
 
 def sandbox():        
     import unittest.mock as mock
