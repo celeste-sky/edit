@@ -13,7 +13,6 @@ from gi.repository import Gtk, GObject
 import graph.node as node
 import os.path
 from ui.wrappers import UILocation
-from workspace.path import Path
 
 class EdgeView(Gtk.VBox):        
     '''
@@ -27,12 +26,11 @@ class EdgeView(Gtk.VBox):
         'location-selected': (GObject.SIGNAL_ACTION, None, (UILocation,))
     }
     
-    def __init__(self, edge_type, root_dir):
+    def __init__(self, edge_type):
         super(EdgeView, self).__init__()
         self.edge_type = edge_type
         self.cur_node = None
         self.edges = []
-        self.root_dir = root_dir # XXX ideally this would not be needed
         
         self.label = Gtk.Label('Edges: '+edge_type)
         self.pack_start(self.label, expand=False, fill=False, padding=0)

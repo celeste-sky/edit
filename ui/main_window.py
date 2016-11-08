@@ -20,10 +20,8 @@ class MainWindow(Gtk.Window):
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
         self.quick_open = QuickOpen(self.workspace)
-        self.outgoing_edges = EdgeView(
-            EdgeView.OUTGOING, self.workspace.root_dir)
-        self.incoming_edges = EdgeView(
-            EdgeView.INCOMING, self.workspace.root_dir)
+        self.outgoing_edges = EdgeView(EdgeView.OUTGOING)
+        self.incoming_edges = EdgeView(EdgeView.INCOMING)
 
         self.accelerators = Gtk.AccelGroup()
         self.add_accel_group(self.accelerators)
