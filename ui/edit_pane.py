@@ -63,11 +63,7 @@ class EditPane(Gtk.Notebook):
                 content = ''
                 logging.info("Couldn't open {}: {}".format(path, e))
             
-        view = GtkSource.View(
-            auto_indent=True, 
-            insert_spaces_instead_of_tabs=True, 
-            tab_width=4, 
-            show_line_numbers=True)
+        view = GtkSource.View(**self.workspace.editor_options)
         
         buf = GtkSource.Buffer()
         if path:

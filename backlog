@@ -10,12 +10,10 @@ Code Comprehension
 Editing UI
 - find
 - goto line
-- one backspace deletes indent
 - multiple columns
 - highlight current symbol
 - multiple cursors
 - inotify
-- column ruler 
 - indent level cue
 - replace
 - vim bindings

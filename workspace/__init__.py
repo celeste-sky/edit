@@ -82,6 +82,10 @@ class Workspace(object):
     @property
     def exclude_files(self):
         return self.config.get('exclude_files', [])
+        
+    @property
+    def editor_options(self):
+        return self.config.get('editor_options', {})
             
 import tempfile
 import unittest
