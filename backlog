@@ -1,3 +1,8 @@
+Testing
+- UI integration test?
+  - no workspace
+  - handling of buffer with no path
+
 Code Comprehension
 - python importer/importee
 - python declaration / callers / symbols

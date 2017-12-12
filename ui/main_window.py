@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2015 Iain Peet
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -45,79 +45,79 @@ class MainWindow(Gtk.Window):
         self.hbox.pack_start(self.edit_pane, True, True, 0)
         self.hbox.pack_start(self.right_nav, False, False, 0)
         self.quick_open.register_accelerators(self.accelerators)
-        
+
         # Top level vbox adds menubar
         self.vbox = Gtk.VBox()
         self.vbox.pack_start(self.menu_bar, False, False, 0)
         self.vbox.pack_start(self.hbox, True, True, 0)
         self.add(self.vbox)
-        
-    def _connect_widgets(self):      
-        self.quick_open.connect('path-selected', 
+
+    def _connect_widgets(self):
+        self.quick_open.connect('path-selected',
             lambda _w, p: self.edit_pane.open_file(p.path))
-            
-        self.outgoing_edges.set_current_node(
-            self.src_graph.find_file(self.edit_pane.get_current_path()))
+
+        if self.edit_pane.get_current_path() is not None:
+            self.outgoing_edges.set_current_node(
+                self.src_graph.find_file(self.edit_pane.get_current_path()))
+            self.incoming_edges.set_current_node(
+                self.src_graph.find_file(self.edit_pane.get_current_path()))
+
         self.outgoing_edges.connect('location-selected',
             lambda _w, l: self.edit_pane.open_file(l.path))
-            
-        self.incoming_edges.set_current_node(
-            self.src_graph.find_file(self.edit_pane.get_current_path()))
         self.incoming_edges.connect('location_selected',
             lambda _w, l: self.edit_pane.open_file(l.path))
-            
-        self.edit_pane.connect('switch-file', 
+        self.edit_pane.connect('switch-file',
             lambda _w, p: self.outgoing_edges.set_current_node(
                 self.src_graph.find_file(p.path)))
         self.edit_pane.connect('switch-file',
             lambda _w, p: self.incoming_edges.set_current_node(
                 self.src_graph.find_file(p.path)))
-        
+
     def _build_menus(self):
         file_menu_item = Gtk.MenuItem(label="File")
         file_menu = Gtk.Menu()
         file_menu_item.set_submenu(file_menu)
-        
+
         save = Gtk.MenuItem(label="Save")
-        key, mod = Gtk.accelerator_parse("<Control>s")        
+        key, mod = Gtk.accelerator_parse("<Control>s")
         save.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         save.connect("activate", self.edit_pane.save_handler)
         file_menu.add(save)
-        
+
         open_item = Gtk.MenuItem(label="Open")
         key, mod = Gtk.accelerator_parse("<Control>o")
         open_item.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         open_item.connect("activate", self.open_handler)
         file_menu.add(open_item)
-        
+
         new = Gtk.MenuItem(label="New")
         key, mod = Gtk.accelerator_parse("<Control>n")
         new.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         new.connect("activate", self.edit_pane.new_file_handler)
         file_menu.add(new)
-        
+
         close_tab = Gtk.MenuItem(label="Close Tab")
         key, mod = Gtk.accelerator_parse("<Control>w")
         close_tab.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         close_tab.connect("activate", self.edit_pane.close_tab_handler)
         file_menu.add(close_tab)
-        
+
         quit = Gtk.MenuItem(label="Quit")
         key, mod = Gtk.accelerator_parse("<Control>q")
         quit.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
         quit.connect("activate", Gtk.main_quit)
         file_menu.add(quit)
-        
-        self.menu_bar.add(file_menu_item)    
-                
+
+        self.menu_bar.add(file_menu_item)
+
     def open_handler(self, widget):
         dialog = Gtk.FileChooserDialog(
-            "Open File", 
+            "Open File",
             self,
             Gtk.FileChooserAction.OPEN,
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -128,4 +128,3 @@ class MainWindow(Gtk.Window):
             self.edit_pane.open_file(Path(
                 dialog.get_filename(), self.workspace.root_dir))
         dialog.destroy()
-        
