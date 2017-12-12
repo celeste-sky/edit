@@ -46,19 +46,28 @@ class Workspace(object):
             listener(removed, added)
             
     def _load_config(self):
+        config_path = os.path.join(self.workspace_dir, 'config')
         try:
-            with open(os.path.join(self.workspace_dir, 'config')) as f:
+            with open(config_path) as f:
                 self.config = json.loads(f.read())
-        except IOError:
-            # it's valid for no config to exist
-            pass
+        except IOError as e:
+            if os.path.exists(config_path):
+                logging.error('Failed to write {}: {}'.format(config_path, e))
+            else:
+                # it's valid for no config to exist
+                pass
             
     def _write_config(self):
+        # XXX: shouldn't write (and possibly clobber) if read failed.
         if not os.path.isdir(self.workspace_dir):
             # no workspace dir -> no saving
             return
-        with open(os.path.join(self.workspace_dir, 'config'), 'w') as f:
-            f.write(json.dumps(self.config, indent=4))
+        config_path = os.path.join(self.workspace_dir, 'config')
+        try:
+            with open(os.path.join(self.workspace_dir, 'config'), 'w') as f:
+                f.write(json.dumps(self.config, indent=4))
+        except IOError as e:
+            logging.error('Failed to write {}: {}'.format(config_path, e))
     
     @property
     def open_files(self):

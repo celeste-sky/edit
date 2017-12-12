@@ -30,3 +30,4 @@ Other UI
 - dirty close save prompt
 - document config options.
 - workspace management
+- preserve comments in config
