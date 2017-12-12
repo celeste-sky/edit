@@ -94,7 +94,20 @@ class Workspace(object):
         
     @property
     def editor_options(self):
-        return self.config.get('editor_options', {})
+        # populate some defaults:
+        res = {
+            'auto-indent': True,
+            'indent-width': 4,
+            'tab-width': 4,
+            'insert-spaces-instead-of-tabs': True,
+            'highlight-current-line': True,
+            'show-right-margin': True,
+            'right-margin-position': 80,
+            'show-line-numbers': True,
+            'smart-backspace': True,
+        }
+        res.update(self.config.get('editor_options', {}))
+        return res
             
 import tempfile
 import unittest
@@ -183,6 +196,22 @@ class WorkspaceTest(unittest.TestCase):
             f.write('{"open_files": ["foo", "bar"]}')
         w = Workspace(self.ws)
         self.assertEqual([p.rel for p in w.open_files], ["foo", "bar"])
+        
+    def test_editor_options_have_defaults(self):
+        os.mkdir(self.ws)
+        w = Workspace(self.ws)
+        opts = w.editor_options
+        self.assertEqual(len(opts), 9)
+        self.assertTrue(opts['auto-indent'])
+        
+    def test_editor_option_override_defaults(self):
+        os.mkdir(self.ws)
+        with open(os.path.join(self.ws, 'config'), 'w') as f:
+            json.dump({'editor_options': {'indent-width': 42}}, f)
+        w = Workspace(self.ws)
+        opts = w.editor_options
+        self.assertEqual(len(opts), 9)
+        self.assertEqual(opts['indent-width'], 42)
         
 if __name__ == '__main__':
     unittest.main()
