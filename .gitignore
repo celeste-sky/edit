@@ -1,3 +1,4 @@
 *.swp
 *.pyc
 .workspace
+.mypy_cache
