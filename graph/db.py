@@ -75,8 +75,7 @@ class Sqlite(object):
                     end_col integer,
                     name text NOT NULL,
                     type integer NOT NULL,
-                    FOREIGN KEY (file) REFERENCES files(id),
-                    PRIMARY KEY (file, line, column)
+                    FOREIGN KEY (file) REFERENCES files(id)
                 )''')
             self.conn.execute('CREATE INDEX sym_by_file ON symbols(file)')
             self.conn.execute('CREATE INDEX sym_by_name ON symbols(name)')
@@ -386,3 +385,14 @@ class SqliteTest(unittest.TestCase):
             self.db.find_references(
                 'bar', path_root=self.temp_dir, typ=SymbolType.CALL),
             [Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL)])
+
+    def test_multi_syms_at_location(self) -> None:
+        self.create_db()
+        p = Path('foo', self.temp_dir)
+        self.db.update_file(p, [
+            Symbol(p, 1, 0, None, None, 'graph', SymbolType.IMPORT),
+            Symbol(p, 1, 0, None, None, 'graph.db', SymbolType.IMPORT)])
+        # XXX: figure out what the UI really wants when there are multiple
+        # symbols at the same location.
+        self.assertEqual(self.db.find_symbol_at(p, 1, 0),
+            Symbol(p, 1, 0, None, None, 'graph', SymbolType.IMPORT))
