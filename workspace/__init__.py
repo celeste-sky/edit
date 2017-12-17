@@ -9,15 +9,15 @@
 import json
 import logging
 import os.path
-from typing import Callable, Dict, List, Set
+from typing import Callable, Dict, List, Optional, Set
 
 from workspace.path import Path
 
 class Workspace(object):
     def __init__(self, workspace_dir:str, must_exist:bool=False) -> None:
         self.workspace_dir = os.path.abspath(workspace_dir)
-        self.files: Set[str] = set()
-        self.file_listeners: List[Callable[[List[str], List[str]], None]] = []
+        self.files: Set[Path] = set()
+        self.file_listeners: List[Callable[[Set[Path], Set[Path]], None]] = []
         self.config: Dict = {}
 
         if must_exist and not os.path.isdir(self.workspace_dir):
@@ -26,7 +26,7 @@ class Workspace(object):
         self._load_config()
         self.reload_file_list()
 
-    def reload_file_list(self):
+    def reload_file_list(self) -> None:
         logging.info("Loading workspace file list")
         root = self.root_dir
         new_files = set()
@@ -49,7 +49,7 @@ class Workspace(object):
         for listener in self.file_listeners:
             listener(removed, added)
 
-    def _load_config(self):
+    def _load_config(self) -> None:
         config_path = os.path.join(self.workspace_dir, 'config')
         try:
             with open(config_path) as f:
@@ -61,7 +61,7 @@ class Workspace(object):
                 # it's valid for no config to exist
                 pass
 
-    def _write_config(self):
+    def _write_config(self) -> None:
         # XXX: shouldn't write (and possibly clobber) if read failed.
         if not os.path.isdir(self.workspace_dir):
             # no workspace dir -> no saving
@@ -74,35 +74,35 @@ class Workspace(object):
             logging.error('Failed to write {}: {}'.format(config_path, e))
 
     @property
-    def open_files(self):
+    def open_files(self) -> List[Path]:
         return [Path(p, self.root_dir) for p in
             self.config.get('open_files', [])]
 
     @open_files.setter
-    def open_files(self, files):
+    def open_files(self, files:List[Path]) -> None:
         self.config['open_files'] = [p.rel for p in files]
         self._write_config()
 
     @property
-    def root_dir(self):
+    def root_dir(self) -> str:
         return self.config.get(
             'root_dir', os.path.dirname(self.workspace_dir))
 
     @root_dir.setter
-    def root_dir(self, root):
+    def root_dir(self, root:str) -> None:
         self.config['root_dir'] = root
         self._write_config()
 
     @property
-    def python_path(self):
+    def python_path(self) -> List[str]:
         return self.config.get('python_path', [])
 
     @property
-    def exclude_files(self):
+    def exclude_files(self) -> List[str]:
         return self.config.get('exclude_files', [])
 
     @property
-    def editor_options(self):
+    def editor_options(self) -> Dict:
         # populate some defaults:
         res = {
             'auto-indent': True,
@@ -119,7 +119,7 @@ class Workspace(object):
         return res
 
     @property
-    def symbol_index(self):
+    def symbol_index(self) -> Path:
         return Path(os.path.join(self.workspace_dir, 'index.db'), self.root_dir)
 
 import tempfile
@@ -128,38 +128,38 @@ import unittest.mock as mock
 import shutil
 
 class WorkspaceTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.temp_dir = tempfile.mkdtemp()
         self.ws = os.path.join(self.temp_dir, '.workspace')
-        self.alt_ws = None
+        self.alt_ws:Optional[str] = None
         open(os.path.join(self.temp_dir, 'foo'), 'w').close()
         os.mkdir(os.path.join(self.temp_dir, 'dir1'))
         open(os.path.join(self.temp_dir, 'dir1', 'file1'), 'w').close()
         os.mkdir(os.path.join(self.temp_dir, 'dir2'))
         open(os.path.join(self.temp_dir, 'dir2', 'file1'), 'w').close()
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         shutil.rmtree(self.temp_dir)
         if self.alt_ws:
             shutil.rmtree(self.alt_ws)
 
-    def assert_default_files(self, workspace):
+    def assert_default_files(self, workspace:Workspace) -> None:
         self.assertEqual(
             set([p.rel for p in workspace.files]),
             set([ 'foo', 'dir1', 'dir1/file1', 'dir2', 'dir2/file1']))
 
-    def test_init(self):
+    def test_init(self) -> None:
         w = Workspace(self.ws)
         self.assert_default_files(w)
 
-    def test_init_remote_workspace(self):
+    def test_init_remote_workspace(self) -> None:
         self.alt_ws = tempfile.mkdtemp()
         with open(os.path.join(self.alt_ws, 'config'), 'w') as f:
             f.write('{"root_dir": "'+self.temp_dir+'"}')
         w = Workspace(self.alt_ws)
         self.assert_default_files(w)
 
-    def test_exclude_files(self):
+    def test_exclude_files(self) -> None:
         os.mkdir(self.ws)
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"exclude_files": ["dir2"]}')
@@ -168,7 +168,7 @@ class WorkspaceTest(unittest.TestCase):
             set([p.rel for p in w.files]),
             set([  'foo', 'dir1', 'dir1/file1']))
 
-    def test_update(self):
+    def test_update(self) -> None:
         w = Workspace(self.ws)
         open(os.path.join(self.temp_dir, 'dir1', 'file2'), 'w').close()
         os.unlink(os.path.join(self.temp_dir, 'dir2', 'file1'))
@@ -179,23 +179,23 @@ class WorkspaceTest(unittest.TestCase):
             set([Path('dir2/file1', self.temp_dir)]),
             set([Path('dir1/file2', self.temp_dir)]))
 
-    def test_hidden_file(self):
+    def test_hidden_file(self) -> None:
         open(os.path.join(self.temp_dir, '.hidden'), 'w').close()
         w = Workspace(self.ws)
         self.assert_default_files(w)
 
-    def test_hidden_dirs(self):
+    def test_hidden_dirs(self) -> None:
         os.mkdir(os.path.join(self.temp_dir, '.hidden'))
         open(os.path.join(self.temp_dir, '.hidden', 'not_hidden'), 'w').close()
         w = Workspace(self.ws)
         self.assert_default_files(w)
 
-    def test_update_doesnt_create_workspace(self):
+    def test_update_doesnt_create_workspace(self) -> None:
         w = Workspace(self.ws)
         w.open_files = [Path('foo', self.temp_dir), Path('bar', self.temp_dir)]
         self.assertFalse(os.path.exists(self.ws))
 
-    def test_update_open_files_written(self):
+    def test_update_open_files_written(self) -> None:
         os.mkdir(self.ws)
         w = Workspace(self.ws)
         w.open_files = [Path('foo', self.temp_dir), Path('bar', self.temp_dir)]
@@ -203,21 +203,21 @@ class WorkspaceTest(unittest.TestCase):
             self.assertEqual(f.read(),
                '{\n    "open_files": [\n        "foo",\n        "bar"\n    ]\n}')
 
-    def test_open_files_read(self):
+    def test_open_files_read(self) -> None:
         os.mkdir(os.path.join(self.ws))
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"open_files": ["foo", "bar"]}')
         w = Workspace(self.ws)
         self.assertEqual([p.rel for p in w.open_files], ["foo", "bar"])
 
-    def test_editor_options_have_defaults(self):
+    def test_editor_options_have_defaults(self) -> None:
         os.mkdir(self.ws)
         w = Workspace(self.ws)
         opts = w.editor_options
         self.assertEqual(len(opts), 9)
         self.assertTrue(opts['auto-indent'])
 
-    def test_editor_option_override_defaults(self):
+    def test_editor_option_override_defaults(self) -> None:
         os.mkdir(self.ws)
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             json.dump({'editor_options': {'indent-width': 42}}, f)
