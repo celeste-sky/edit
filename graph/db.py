@@ -130,6 +130,30 @@ class Sqlite(object):
                 [(file_id, s.line, s.column, s.end_line, s.end_column,
                     s.name, s.sym_type.value) for s in symbols])
 
+    def dump_file(self, path: Path) -> List[Symbol]:
+        '''
+        Fetch all symbols for the given file.
+        XXX: limit + pagination?
+        '''
+        with self.conn:
+            file_id = self._get_file_id(path)
+            if file_id is None:
+                raise DBException('File is not indexed: {}'.format(path))
+            c = self.conn.cursor()
+            c.execute(
+                '''
+                    SELECT line, column, end_line, end_col, name, type
+                    FROM symbols
+                    WHERE file=?
+                    ORDER BY line
+                ''',
+                (file_id,))
+            res = c.fetchall()
+        return [
+            Symbol(path, r[0], r[1], r[2], r[3], r[4], SymbolType(r[5]))
+            for r in res
+        ]
+
     def find_symbol_at(
             self, path: Path, line: int, col: int=None) -> Optional[Symbol]:
         '''
@@ -228,6 +252,7 @@ import unittest
 
 class SqliteTest(unittest.TestCase):
     def setUp(self) -> None:
+        self.maxDiff = 2000
         self.temp_dir = tempfile.mkdtemp()
         self.db: Sqlite = None
 
@@ -396,3 +421,23 @@ class SqliteTest(unittest.TestCase):
         # symbols at the same location.
         self.assertEqual(self.db.find_symbol_at(p, 1, 0),
             Symbol(p, 1, 0, None, None, 'graph', SymbolType.IMPORT))
+
+    def test_dump_no_such_file(self) -> None:
+        self.create_db()
+        p = Path('foo', self.temp_dir)
+        with self.assertRaisesRegexp(DBException, "File is not indexed"):
+            self.db.dump_file(p)
+
+    def test_dump_empty_file(self) -> None:
+        self.create_db()
+        p = Path('foo', self.temp_dir)
+        self.db.update_file(p, [])
+        self.assertEqual(self.db.dump_file(p), [])
+
+    def test_dump_file(self) -> None:
+        self.create_db()
+        p = Path('foo', self.temp_dir)
+        self.db.update_file(p,
+            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)])
+        self.assertEqual(self.db.dump_file(p),
+            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)])
