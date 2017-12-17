@@ -41,6 +41,22 @@ def do_update(args:argparse.Namespace)->None:
     finally:
         db.close()
 
+def do_dump(args:argparse.Namespace)->None:
+    ws = Workspace(args.dir, must_exist=True)
+    path = Path(args.path, ws.root_dir)
+    db = Sqlite(ws.symbol_index)
+    try:
+        syms = db.dump_file(path)
+        last_line = 0
+        for s in syms:
+            line = s.line if s.line != last_line else '|'
+            last_line = s.line
+            print('{line:>3}: {indent}{sym.sym_type.name} {sym.name}'.format(
+                line=line, sym=s, indent=" "*s.column))
+    finally:
+        db.close()
+
+
 def main(argv:List[str]) -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', '-d', type=str, required=True,
@@ -59,6 +75,11 @@ def main(argv:List[str]) -> None:
     update.add_argument('--path', '-p', type=str, required=True,
         help='Path to update in the index.  Abs, or relative to index root.')
     update.set_defaults(func=do_update)
+
+    dump = subparsers.add_parser('dump',
+        help="Dump all indexed symbols for a file")
+    dump.add_argument('--path', '-p', type=str, required=True)
+    dump.set_defaults(func=do_dump)
 
     args = parser.parse_args(argv)
     args.func(args)

@@ -138,14 +138,14 @@ class Sqlite(object):
         with self.conn:
             file_id = self._get_file_id(path)
             if file_id is None:
-                raise DBException('File is not indexed: {}'.format(path))
+                raise DBException('File is not indexed: {}'.format(path.abs))
             c = self.conn.cursor()
             c.execute(
                 '''
                     SELECT line, column, end_line, end_col, name, type
                     FROM symbols
                     WHERE file=?
-                    ORDER BY line
+                    ORDER BY line, column
                 ''',
                 (file_id,))
             res = c.fetchall()
