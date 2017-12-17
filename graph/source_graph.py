@@ -7,45 +7,46 @@
 # (at your option) any later version.
 
 from graph.edge import Edge, EdgeType
-import graph.py_file
+from graph.py_file import PyFile, new_file
+from graph.node import Node
 import logging
-import workspace
+from typing import Dict, List, Tuple
+from workspace import Workspace
 from workspace.path import Path
 
 class SourceGraph(object):
-    def __init__(self, workspace):
+    def __init__(self, workspace:Workspace) -> None:
         self.workspace = workspace
-        # {abspath: FileNode}
         self.files, self.ext_files = self._load_files()
 
         # connect all workspace files
         for f in self.files.values():
             f.visit(self)
 
-    def _load_files(self):
+    def _load_files(self) -> Tuple[Dict[Path, PyFile], Dict[Path, PyFile]]:
         # First, load all the files in the workspace
         files = {}
         for p in self.workspace.files:
-            f = graph.py_file.new_file(p, self.workspace)
+            f = new_file(p, self.workspace)
             if f:
                 logging.debug('Loaded file: {}'.format(p))
                 files[p] = f
 
         # Now, check each files for imports external to the workspace
-        ext_files = {}
+        ext_files:Dict = {}
         for f in files.values():
             ext = [i for i in f.imports if not i in files]
             ext_files.update({e: None for e in ext})
 
         # Load all the external files
         for p in ext_files.keys():
-            ext_files[p] = graph.py_file.new_file(p, self.workspace, external=True)
+            ext_files[p] = new_file(p, self.workspace, external=True)
             if not ext_files[p]:
                 del ext_files[p]
 
         return files, ext_files
 
-    def find_file(self, path):
+    def find_file(self, path:Path) -> PyFile:
         assert isinstance(path, Path), str(path)
         if path in self.files:
             return self.files[path]
@@ -61,24 +62,24 @@ import tempfile
 import unittest
 
 class SourceGraphTest(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
         self.dir = tempfile.mkdtemp()
         self.ws = os.path.join(self.dir, '.workspace')
         os.mkdir(self.ws)
         with open(os.path.join(self.ws, 'config'), 'w') as f:
             f.write('{"python_path": [ "'+self.dir+'" ] }')
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         shutil.rmtree(self.dir)
 
-    def test_src_graph(self):
+    def test_src_graph(self) -> None:
         with open(os.path.join(self.dir, 'foo.py'), 'w') as f:
             f.write('import bar, baz')
         with open(os.path.join(self.dir, 'bar.py'), 'w') as f:
             f.write('import foo, baz')
         with open(os.path.join(self.dir, 'baz.py'), 'w') as f:
             f.write('import shutil')
-        w = workspace.Workspace(self.ws)
+        w = Workspace(self.ws)
         sg = SourceGraph(w)
 
         self.assertEqual(set(sg.files.keys()),
