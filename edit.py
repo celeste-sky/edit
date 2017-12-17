@@ -10,7 +10,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkSource', '3.0')
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 from graph.source_graph import SourceGraph
 import logging
 import os.path
@@ -22,6 +22,17 @@ from workspace import Workspace
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    
+    app_dir = os.path.dirname(__file__)
+    
+    # Load default styling
+    with open(os.path.join(app_dir, 'default.css'), 'rb') as f:
+        css = f.read()
+    style_provider = Gtk.CssProvider()
+    style_provider.load_from_data(css)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(), style_provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
     
     ws_dir = '.workspace'
     if len(sys.argv) == 2:
