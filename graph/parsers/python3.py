@@ -13,6 +13,12 @@ from typing import List, Optional
 from workspace.path import Path
 
 class Py3Parser(object):
+    def accept(self, path:Path) -> bool:
+        '''
+        Determine if this parser is suitable to parse the given path.
+        '''
+        return path.basename.lower().endswith(".py")
+
     def parse(self, path:Path) -> List[Symbol]:
         with open(path.abs) as f:
             try:

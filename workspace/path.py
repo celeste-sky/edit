@@ -60,6 +60,14 @@ class Path(object):
     def in_workspace(self) -> bool:
         return self.abs.startswith(self._ws_root)
 
+    @property
+    def basename(self) -> str:
+        return os.path.basename(self.abs)
+
+    @property
+    def isdir(self) -> bool:
+        return os.path.isdir(self.abs)
+
     def abbreviate(self, max_len:int=32, require_basename:bool=True) -> str:
         '''
         Returns the shortest possible path (whether abs or relative), removing

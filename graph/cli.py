@@ -8,7 +8,9 @@
 
 import argparse
 from graph.db import Sqlite
+from graph.indexer import Indexer
 from graph.parsers.python3 import Py3Parser
+import logging
 import os.path
 import shutil
 import sys
@@ -41,6 +43,12 @@ def do_update(args:argparse.Namespace)->None:
     finally:
         db.close()
 
+def do_update_all(args:argparse.Namespace) -> None:
+    ws = Workspace(args.dir, must_exist=True)
+    db = Sqlite(ws.symbol_index)
+    i = Indexer(ws, db, [Py3Parser()])
+    i.update()
+
 def do_dump(args:argparse.Namespace)->None:
     ws = Workspace(args.dir, must_exist=True)
     path = Path(args.path, ws.root_dir)
@@ -55,7 +63,6 @@ def do_dump(args:argparse.Namespace)->None:
                 line=line, sym=s, indent=" "*s.column))
     finally:
         db.close()
-
 
 def main(argv:List[str]) -> None:
     parser = argparse.ArgumentParser()
@@ -72,17 +79,21 @@ def main(argv:List[str]) -> None:
     create.set_defaults(func=do_create)
 
     update = subparsers.add_parser('update')
-    update.add_argument('--path', '-p', type=str, required=True,
+    update.add_argument('path', type=str,
         help='Path to update in the index.  Abs, or relative to index root.')
     update.set_defaults(func=do_update)
 
+    update_all = subparsers.add_parser('update-all')
+    update_all.set_defaults(func=do_update_all)
+
     dump = subparsers.add_parser('dump',
         help="Dump all indexed symbols for a file")
-    dump.add_argument('--path', '-p', type=str, required=True)
+    dump.add_argument('path', type=str)
     dump.set_defaults(func=do_dump)
 
     args = parser.parse_args(argv)
     args.func(args)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     main(sys.argv[1:])
