@@ -20,8 +20,9 @@ class SymbolType(Enum):
     CLASS = 1
     FUNCTION = 2
     VALUE = 3
-    CALL = 4
-    REFERENCE = 5
+    CALL = 100
+    REFERENCE = 101
+    IMPORT = 102
 
 class Symbol(NamedTuple):
     path: Path
@@ -209,8 +210,8 @@ class Sqlite(object):
         '''
         if typ is None:
             return self._do_search(
-                'AND (type=? OR type=?)',
-                (name, SymbolType.REFERENCE.value, SymbolType.CALL.value,
+                'AND type>=? AND type<=?',
+                (name, SymbolType.CALL.value, SymbolType.IMPORT.value,
                     max_num),
                 path_root)
         else:
@@ -314,7 +315,8 @@ class SqliteTest(unittest.TestCase):
             Symbol(p, 4, 8, 4, 20, 'bar', SymbolType.VALUE),
             Symbol(p, 6, 4, 8, 20, 'frobnosticate', SymbolType.FUNCTION),
             Symbol(p, 7, 8, 7, 30, 'clobber', SymbolType.CALL),
-            Symbol(p, 7, 20, 7, 24, 'BOOP', SymbolType.REFERENCE)])
+            Symbol(p, 7, 20, 7, 24, 'BOOP', SymbolType.REFERENCE),
+            Symbol(p, 8, 0, 8, 10, 'bar', SymbolType.IMPORT)])
         p = Path('bar', self.temp_dir)
         self.db.update_file(p, [
             Symbol(p, 1, 0, 1, 4, 'BOOP', SymbolType.VALUE),
@@ -370,7 +372,9 @@ class SqliteTest(unittest.TestCase):
             set(self.db.find_references('bar', path_root=self.temp_dir)),
             set([
                 Symbol(p, 7, 8, 7, 20, 'bar', SymbolType.REFERENCE),
-                Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL)
+                Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL),
+                Symbol(Path('foo', self.temp_dir),
+                    8, 0, 8, 10, 'bar', SymbolType.IMPORT)
             ]))
 
     def test_find_call(self) -> None:
