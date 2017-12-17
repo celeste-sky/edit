@@ -12,6 +12,7 @@ from ui.edit_pane import EditPane
 from ui.quick_open import QuickOpen
 from workspace.path import Path
 
+
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
         super(MainWindow, self).__init__(
@@ -32,18 +33,18 @@ class MainWindow(Gtk.Window):
 
     def _build_layout(self):
         # right nav vbox
-        self.right_nav = Gtk.VBox()
-        self.right_nav.pack_start(
+        self.left_nav = Gtk.VBox()
+        self.left_nav.pack_start(
             self.quick_open, expand=True, fill=True, padding=0)
-        self.right_nav.pack_start(
+        self.left_nav.pack_start(
             self.outgoing_edges, expand=True, fill=True, padding=0)
-        self.right_nav.pack_start(
+        self.left_nav.pack_start(
             self.incoming_edges, expand=True, fill=True, padding=0)
 
         # hbox lays our edit pane with navigation panels on sides
         self.hbox = Gtk.HBox()
+        self.hbox.pack_start(self.left_nav, False, False, 0)
         self.hbox.pack_start(self.edit_pane, True, True, 0)
-        self.hbox.pack_start(self.right_nav, False, False, 0)
         self.quick_open.register_accelerators(self.accelerators)
 
         # Top level vbox adds menubar
