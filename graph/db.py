@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2015 Iain Peet
+# Copyright 2017 Iain Peet
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ class SymbolType(Enum):
     CLASS = 1
     FUNCTION = 2
     VALUE = 3
+
     CALL = 100
     REFERENCE = 101
     IMPORT = 102

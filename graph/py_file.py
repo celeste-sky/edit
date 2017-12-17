@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2015 Iain Peet
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -16,10 +16,10 @@ from workspace.path import Path
 
 def resolve_import(name, finder, extra_search):
     if 'os.path' == name:
-        # paper over dynamic import hijinks 
+        # paper over dynamic import hijinks
         return None, [i.replace('.pyc', '.py') for i in [
             os.__file__, os.path.__file__]]
-        
+
     if '.' in name:
         pkg, mod = name.rsplit(".", 1)
         parent, paths = resolve_import(pkg, finder, extra_search)
@@ -27,7 +27,7 @@ def resolve_import(name, finder, extra_search):
         mod = name
         parent = None
         paths = []
-    
+
     if parent:
         f, pathname, desc = finder(mod, [parent])
     else:
@@ -37,10 +37,10 @@ def resolve_import(name, finder, extra_search):
             if not extra_search:
                 raise
             f, pathname, desc = finder(mod, extra_search)
-         
+
     if f:
         f.close()
-    
+
     if desc[2] == imp.PY_SOURCE:
         assert pathname
         paths.append(pathname)
@@ -63,10 +63,10 @@ class PyFile(node.File):
         self.functions = [] # [node.Function]
         self.classes = [] # [node.Class]
         self.calls = [] # [node.Call]
-        
+
         if not no_load:
             self._load()
-        
+
     def _load(self):
         with open(self.path.abs) as f:
             try:
@@ -74,7 +74,7 @@ class PyFile(node.File):
             except SyntaxError as e:
                 logging.info("Couldn't parse {}: {}".format(self.path, e))
                 return
-            
+
         parsed_imports = [] #[(name, maybe_not_module), ...]
         self.functions = []
         for n in ast.walk(tree):
@@ -86,50 +86,25 @@ class PyFile(node.File):
                 for name in n.names:
                     parsed_imports.append(
                         ('{}.{}'.format(n.module, name.name), True))
-            if isinstance(n, ast.FunctionDef):
-                f = node.Function(n.name)
-                f.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
-                self.functions.append(f)
-            if isinstance(n, ast.ClassDef):
-                c = node.Class(n.name)
-                c.declarations = [node.Location(self.path, n.lineno, n.col_offset)]
-                self.classes.append(c)
-            if isinstance(n, ast.Call):
-                self._load_call(n)    
-        
-        new_imports = set() 
+
+        new_imports = set()
         for name, maybe_not_module in parsed_imports:
             try:
                 parent, paths = resolve_import(
                     name, self.finder, self.workspace.python_path)
                 new_imports.update(set(
-                    Path(os.path.realpath(p), self.workspace.root_dir) 
+                    Path(os.path.realpath(p), self.workspace.root_dir)
                     for p in paths))
             except ImportError as e:
                 if not maybe_not_module:
-                    # ImportError is not interesting if this is a name in 
+                    # ImportError is not interesting if this is a name in
                     # "from mod import names", as it's probably a non-module
                     # name.
                     logging.info('Failed to resolve {}:{}: {}'.format(
                         self.path, name, e))
-                        
+
         self.imports = new_imports
-        
-    def _load_call(self, call):
-        # The most common cases are going to be calls of a name ("foo()") or
-        # an attr ("obj.foo()").  Of course, the func could be any expression, but
-        # won't attempt to do anything with the more obscure cases for now.
-        # XXX this call will also be duplicated as a Reference, which is annoying,
-        # and needs a less stupid ast walker to fix.
-        if isinstance(call.func, ast.Name):
-            c = node.Call(call.func.id)
-        elif isinstance(call.func, ast.Attribute):
-            c = node.Call(call.func.attr)
-        else:
-            return
-        c.declarations = [node.Location(self.path, call.lineno, call.col_offset)]
-        self.calls.append(c)
-        
+
     def visit(self, source_graph):
         for i in self.imports:
             d = source_graph.find_file(i)
@@ -140,7 +115,7 @@ class PyFile(node.File):
             e = edge.Edge(edge.EdgeType.IMPORT, self, d)
             self.outgoing.add(e)
             d.incoming.add(e)
-        
+
 def new_file(path, workspace, external=False):
     if not os.path.isfile(path.abs):
         return None
@@ -150,8 +125,8 @@ def new_file(path, workspace, external=False):
         return None
     else:
         logging.debug('Unrecognized file type: {}'.format(path))
-        return None            
-       
+        return None
+
 import tempfile
 import unittest
 import unittest.mock as mock
@@ -168,7 +143,7 @@ def make_finder(modules):
                 name, paths))
     return res
 
-class ResolveImportTest(unittest.TestCase):        
+class ResolveImportTest(unittest.TestCase):
     def test_resolve_top(self):
         mock_finder = make_finder({
             ('mod', None): ('mod.py', imp.PY_SOURCE)
@@ -176,7 +151,7 @@ class ResolveImportTest(unittest.TestCase):
         parent, paths = resolve_import('mod', mock_finder, None)
         self.assertIsNone(parent)
         self.assertEqual(paths, ['mod.py'])
-        
+
     def test_resolve_pkg(self):
         mock_finder = make_finder({
             ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
@@ -184,7 +159,7 @@ class ResolveImportTest(unittest.TestCase):
         parent, paths = resolve_import('pkg', mock_finder, None)
         self.assertEqual(parent, 'pkg/')
         self.assertEqual(paths, ['pkg/__init__.py'])
-        
+
     def test_resolve_in_pkg(self):
         mock_finder = make_finder({
             ('mod', ('pkg/',)): ('pkg/mod.py', imp.PY_SOURCE),
@@ -204,30 +179,30 @@ class PyFileTest(unittest.TestCase):
             ('root', None): ('/root/', imp.PKG_DIRECTORY)
         }
         self.ws = mock.MagicMock()
-        
+
     def tearDown(self):
         shutil.rmtree(self.dir)
-        
+
     def test_load_empty(self):
         open(self.src.abs, 'w').close()
         p = PyFile(self.src, self.ws)
         self.assertEqual(p.imports, set())
-        
+
     def test_load_malformed(self):
         with open(self.src.abs, 'w') as f:
             f.write('invalid python')
         p = PyFile(self.src, self.ws, make_finder({}))
         self.assertEqual(p.imports, set())
-        
+
     def test_load_import(self):
         with open(self.src.abs, 'w') as f:
             f.write('import root.pkg.mod')
         mock_finder = make_finder(self.modules)
         p = PyFile(self.src, self.ws, mock_finder)
         self.assertEqual(
-            set(i.abs for i in p.imports), 
+            set(i.abs for i in p.imports),
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
-            
+
     def test_load_multi_import_as(self):
         with open(self.src.abs, 'w') as f:
             f.write('import root.foo as f, root.pkg.mod as m')
@@ -236,89 +211,27 @@ class PyFileTest(unittest.TestCase):
         })
         p = PyFile(self.src, self.ws, make_finder(self.modules))
         self.assertEqual(set(i.abs for i in p.imports),  {
-            '/root/__init__.py', 
+            '/root/__init__.py',
             '/root/foo.py',
-            '/root/pkg/__init__.py', 
+            '/root/pkg/__init__.py',
             '/root/pkg/mod.py'
         })
-        
+
     def test_load_from_import_nonmod(self):
         with open(self.src.abs, 'w') as f:
             f.write('from root.pkg import Classy')
         p = PyFile(self.src, self.ws, make_finder(self.modules))
-        self.assertEqual(set(i.abs for i in p.imports), 
+        self.assertEqual(set(i.abs for i in p.imports),
             {'/root/__init__.py', '/root/pkg/__init__.py'})
-            
+
     def test_load_from_import_mod(self):
         with open(self.src.abs, 'w') as f:
             f.write('from root.pkg import mod')
         p = PyFile(self.src, self.ws, make_finder(self.modules))
-        self.assertEqual(set(i.abs for i in p.imports), 
+        self.assertEqual(set(i.abs for i in p.imports),
             {'/root/__init__.py', '/root/pkg/__init__.py', '/root/pkg/mod.py'})
-            
-    def test_function_def(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('def foo():\n  pass\n')
-        p = PyFile(self.src, self.ws)
-        f, = p.functions
-        self.assertEqual(f.name, 'foo')
-        self.assertEqual(f.declarations, [node.Location(self.src, 1, 0)])
-        
-    def test_nested_function(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('\n'.join([
-                'def foo():',
-                '  def bar():',
-                '    pass',
-                '']))
-        p = PyFile(self.src, self.ws)
-        f1, f2 = p.functions
-        self.assertEqual(f1.name, 'foo')
-        self.assertEqual(f1.declarations, [node.Location(self.src, 1, 0)])
-        self.assertEqual(f2.name, 'bar')
-        self.assertEqual(f2.declarations, [node.Location(self.src, 2, 2)])
-        
-    def test_method(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('\n'.join([
-                'class Foo(object):',
-                '  def foo():',
-                '    pass',
-                '']))
-        p = PyFile(self.src, self.ws)
-        f, = p.functions
-        self.assertEqual(f.name, 'foo')
-        self.assertEqual(f.declarations, [node.Location(self.src, 2, 2)])
-        
-    def test_class(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('class Foo(object):\n  pass\n')
-        p = PyFile(self.src, self.ws)
-        c, = p.classes
-        self.assertEqual(c.name, 'Foo')
-        self.assertEqual(c.declarations, [node.Location(self.src, 1, 0)])
-        
-    def test_call_name(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('foo("bar", 42)')
-        p = PyFile(self.src, self.ws)
-        c, = p.calls
-        self.assertEqual(c.name, 'foo')
-        
-    def test_call_attr(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('foo.bar.baz(1, 2, 3)')
-        p = PyFile(self.src, self.ws)
-        c, = p.calls
-        self.assertEqual(c.name, 'baz')
-        
-    def test_call_dict_item(self):
-        with open(self.src.abs, 'w') as f:
-            f.write('dict["key"](42)')
-        p = PyFile(self.src, self.ws)
-        self.assertEqual(p.calls, [])       
-        
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
     unittest.main()
-    
+
