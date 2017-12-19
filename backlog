@@ -22,6 +22,7 @@ Editing UI
 - indent level cue
 - replace
 - vim bindings
+- sourceview style picker
 
 Other UI
 - quick open
