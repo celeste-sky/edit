@@ -10,49 +10,10 @@ import ast
 import logging
 import graph.edge as edge
 import graph.node as node
+from graph.parsers.python3 import resolve_import, make_finder
 import imp
 import os.path
 from workspace.path import Path
-
-def resolve_import(name, finder, extra_search):
-    if 'os.path' == name:
-        # paper over dynamic import hijinks
-        return None, [i.replace('.pyc', '.py') for i in [
-            os.__file__, os.path.__file__]]
-
-    if '.' in name:
-        pkg, mod = name.rsplit(".", 1)
-        parent, paths = resolve_import(pkg, finder, extra_search)
-    else:
-        mod = name
-        parent = None
-        paths = []
-
-    if parent:
-        f, pathname, desc = finder(mod, [parent])
-    else:
-        try:
-            f, pathname, desc = finder(mod, None)
-        except ImportError:
-            if not extra_search:
-                raise
-            f, pathname, desc = finder(mod, extra_search)
-
-    if f:
-        f.close()
-
-    if desc[2] == imp.PY_SOURCE:
-        assert pathname
-        paths.append(pathname)
-        return None, paths
-    elif desc[2] == imp.PKG_DIRECTORY:
-        assert pathname
-        paths.append(os.path.join(pathname, '__init__.py'))
-        return pathname, paths
-    elif desc[2] == imp.C_BUILTIN:
-        return None, paths
-    else:
-        raise ImportError('Unknown module type: {}'.format(desc[2]))
 
 class PyFile(node.File):
     def __init__(self, path, workspace, finder=imp.find_module, no_load=False):
@@ -131,43 +92,6 @@ import tempfile
 import unittest
 import unittest.mock as mock
 import shutil
-
-def make_finder(modules):
-    def res(name, paths):
-        paths = tuple(paths) if paths else None
-        if (name, paths) in modules:
-            path, typ = modules[(name, paths)]
-            return (None, path, (None, None, typ))
-        else:
-            raise ImportError('Failed to find {} in {}'.format(
-                name, paths))
-    return res
-
-class ResolveImportTest(unittest.TestCase):
-    def test_resolve_top(self):
-        mock_finder = make_finder({
-            ('mod', None): ('mod.py', imp.PY_SOURCE)
-        })
-        parent, paths = resolve_import('mod', mock_finder, None)
-        self.assertIsNone(parent)
-        self.assertEqual(paths, ['mod.py'])
-
-    def test_resolve_pkg(self):
-        mock_finder = make_finder({
-            ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
-        })
-        parent, paths = resolve_import('pkg', mock_finder, None)
-        self.assertEqual(parent, 'pkg/')
-        self.assertEqual(paths, ['pkg/__init__.py'])
-
-    def test_resolve_in_pkg(self):
-        mock_finder = make_finder({
-            ('mod', ('pkg/',)): ('pkg/mod.py', imp.PY_SOURCE),
-            ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
-        })
-        parent, paths = resolve_import('pkg.mod', mock_finder, None)
-        self.assertIsNone(parent)
-        self.assertEqual(paths, ['pkg/__init__.py', 'pkg/mod.py'])
 
 class PyFileTest(unittest.TestCase):
     def setUp(self):

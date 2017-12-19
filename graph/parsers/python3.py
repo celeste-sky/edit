@@ -8,9 +8,62 @@
 
 import ast
 from graph.db import Symbol, SymbolType
+import imp
 import logging
-from typing import List, Optional
+import os.path
+from typing import Callable, Dict, IO, List, Optional, Tuple
 from workspace.path import Path
+
+# The signature of imp.find_module
+# XXX: which is deprecated since 3.3...
+FoundDesc = Tuple[Optional[str], Optional[str], int]
+Finder = Callable[[str, List[str]], Tuple[IO, str, FoundDesc]]
+
+def resolve_import(name:str, finder:Finder, extra_search:List[str]
+        ) -> Tuple[Optional[str], List[str]]:
+    '''
+    Search for the given name using the given module finder, and optionally
+    search in the given additional search dirs.  Return the path for the named
+    module, and also a list of the paths for all of that module's parents.
+    '''
+    if 'os.path' == name:
+        # paper over dynamic import hijinks
+        return None, [i.replace('.pyc', '.py') for i in [
+            os.__file__, os.path.__file__]]
+
+    if '.' in name:
+        pkg, mod = name.rsplit(".", 1)
+        parent, paths = resolve_import(pkg, finder, extra_search)
+    else:
+        mod = name
+        parent = None
+        paths = []
+
+    if parent:
+        f, pathname, desc = finder(mod, [parent])
+    else:
+        try:
+            f, pathname, desc = finder(mod, None)
+        except ImportError:
+            if not extra_search:
+                raise
+            f, pathname, desc = finder(mod, extra_search)
+
+    if f:
+        f.close()
+
+    if desc[2] == imp.PY_SOURCE:
+        assert pathname
+        paths.append(pathname)
+        return None, paths
+    elif desc[2] == imp.PKG_DIRECTORY:
+        assert pathname
+        paths.append(os.path.join(pathname, '__init__.py'))
+        return pathname, paths
+    elif desc[2] == imp.C_BUILTIN:
+        return None, paths
+    else:
+        raise ImportError('Unknown module type: {}'.format(desc[2]))
 
 class Py3Parser(object):
     def accept(self, path:Path) -> bool:
@@ -67,6 +120,46 @@ class Py3Parser(object):
 import shutil
 import tempfile
 import unittest
+
+ModuleMap = Dict[
+    Tuple[str, Optional[Tuple[str, ...]]], Tuple[str, int]]
+
+def make_finder(modules:ModuleMap) -> Finder:
+    def res(name:str, paths:List[str]) -> Tuple[Optional[IO], str, FoundDesc]:
+        path_tup:Tuple[str, ...] = tuple(paths) if paths else None
+        if (name, path_tup) in modules:
+            path, typ = modules[(name, path_tup)]
+            return (None, path, (None, None, typ))
+        else:
+            raise ImportError('Failed to find {} in {}'.format(
+                name, path_tup))
+    return res
+
+class ResolveImportTest(unittest.TestCase):
+    def test_resolve_top(self) -> None:
+        mock_finder = make_finder({
+            ('mod', None): ('mod.py', imp.PY_SOURCE)
+        })
+        parent, paths = resolve_import('mod', mock_finder, None)
+        self.assertIsNone(parent)
+        self.assertEqual(paths, ['mod.py'])
+
+    def test_resolve_pkg(self) -> None:
+        mock_finder = make_finder({
+            ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
+        })
+        parent, paths = resolve_import('pkg', mock_finder, None)
+        self.assertEqual(parent, 'pkg/')
+        self.assertEqual(paths, ['pkg/__init__.py'])
+
+    def test_resolve_in_pkg(self) -> None:
+        mock_finder = make_finder({
+            ('mod', ('pkg/',)): ('pkg/mod.py', imp.PY_SOURCE),
+            ('pkg', None): ('pkg/', imp.PKG_DIRECTORY)
+        })
+        parent, paths = resolve_import('pkg.mod', mock_finder, None)
+        self.assertIsNone(parent)
+        self.assertEqual(paths, ['pkg/__init__.py', 'pkg/mod.py'])
 
 class Py3ParserTest(unittest.TestCase):
     def setUp(self) -> None:
