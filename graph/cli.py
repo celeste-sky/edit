@@ -64,6 +64,21 @@ def do_dump(args:argparse.Namespace)->None:
     finally:
         db.close()
 
+def do_stats(args:argparse.Namespace)->None:
+    ws = Workspace(args.dir, must_exist=True)
+    db = Sqlite(ws.symbol_index)
+    try:
+        stats = db.dump_stats()
+        w = max([len(f) for f in stats['files']]) # col width for align
+        for f in sorted(stats['files']):
+            print('{:{w}} {} symbols, {} imports'.format(f,
+                stats['symbols'].get(f, 0), stats['imports'].get(f, 0), w=w))
+        print('Total Files: {}'.format(len(stats['files'])))
+        print('Total Symbols: {}'.format(stats['symbols']['total']))
+        print('Total Imports: {}'.format(stats['imports']['total']))
+    finally:
+        db.close()
+
 def do_imports(args:argparse.Namespace)->None:
     ws = Workspace(args.dir, must_exist=True)
     path = Path(args.path, ws.root_dir)
@@ -106,6 +121,9 @@ def main(argv:List[str]) -> None:
         help='Dump all resolved imports for a file')
     imports.add_argument('path', type=str)
     imports.set_defaults(func=do_imports)
+
+    stats = subparsers.add_parser('stats')
+    stats.set_defaults(func=do_stats)
 
     args = parser.parse_args(argv)
     args.func(args)

@@ -192,6 +192,42 @@ class Sqlite(object):
         resolved_map = {n: Path(p, path.ws_root) for n, p in all_resolutions}
         return {n: resolved_map.get(n, None) for n in all_imports}
 
+    def dump_stats(self) -> Dict:
+        res: Dict = {}
+
+        with self.conn:
+            c = self.conn.cursor()
+            c.execute('SELECT path FROM files')
+            files = c.fetchall()
+        res['files'] = set([i for (i,) in files])
+
+        with self.conn:
+            c = self.conn.cursor()
+            c.execute(
+                '''
+                    SELECT path, count(*)
+                    FROM symbols
+                    INNER JOIN files ON symbols.file=files.id
+                    GROUP BY path
+                ''')
+            syms_by_file = c.fetchall()
+        res['symbols'] = {p: c for p, c in syms_by_file}
+        res['symbols']['total'] = sum([i[1] for i in syms_by_file])
+
+        with self.conn:
+            c = self.conn.cursor()
+            c.execute(
+                '''
+                    SELECT path, count(*)
+                    FROM imports
+                    INNER JOIN files ON imports.file=files.id
+                    GROUP BY path
+                ''')
+            imps_by_file = c.fetchall()
+        res['imports'] = {p: c for p, c in imps_by_file}
+        res['imports']['total'] = sum([i[1] for i in imps_by_file])
+        return res
+
     def find_symbol_at(
             self, path: Path, line: int, col: int=None) -> Optional[Symbol]:
         '''
@@ -516,3 +552,21 @@ class SqliteTest(unittest.TestCase):
                 ('baz', Path('baz', self.temp_dir))
             ])
         self.assertEqual(self.db.dump_imports(p), {'foo': p, 'bar': None })
+
+    def test_dump_stats(self) -> None:
+        self.create_db()
+        p = Path('foo', self.temp_dir)
+        self.db.update_file(p, [
+                Symbol(p, 1, 0, None, None, 'foo', SymbolType.IMPORT),
+                Symbol(p, 2, 0, None, None, 'bar', SymbolType.IMPORT)
+            ],
+            [
+                ('foo', p),
+                ('baz', Path('baz', self.temp_dir))
+            ])
+        self.assertEqual(self.db.dump_stats(),
+            {
+                'files': {p.abs},
+                'symbols': {p.abs: 2, 'total': 2},
+                'imports': {p.abs: 2, 'total': 2}
+            })
