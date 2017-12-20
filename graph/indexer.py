@@ -45,5 +45,5 @@ class Indexer(object):
             log.info('Multiple parsers for file: {}'.format(path.abs))
 
         syms, imports = candidates[0].parse(path)
-        self.db.update_file(path, syms)
+        self.db.update_file(path, syms, imports)
         log.debug('Indexed: {}'.format(path.abs))

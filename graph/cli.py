@@ -39,7 +39,7 @@ def do_update(args:argparse.Namespace)->None:
     syms, imports = Py3Parser().parse(path)
     db = Sqlite(ws.symbol_index)
     try:
-        db.update_file(path, syms)
+        db.update_file(path, syms, imports)
     finally:
         db.close()
 
@@ -61,6 +61,17 @@ def do_dump(args:argparse.Namespace)->None:
             last_line = s.line
             print('{line:>3}: {indent}{sym.sym_type.name} {sym.name}'.format(
                 line=line, sym=s, indent=" "*s.column))
+    finally:
+        db.close()
+
+def do_imports(args:argparse.Namespace)->None:
+    ws = Workspace(args.dir, must_exist=True)
+    path = Path(args.path, ws.root_dir)
+    db = Sqlite(ws.symbol_index)
+    try:
+        imports = db.dump_imports(path)
+        for name, path in sorted(imports.items()):
+            print('{} -> {}'.format(name, path.abs if path else '???'))
     finally:
         db.close()
 
@@ -90,6 +101,11 @@ def main(argv:List[str]) -> None:
         help="Dump all indexed symbols for a file")
     dump.add_argument('path', type=str)
     dump.set_defaults(func=do_dump)
+
+    imports = subparsers.add_parser('imports',
+        help='Dump all resolved imports for a file')
+    imports.add_argument('path', type=str)
+    imports.set_defaults(func=do_imports)
 
     args = parser.parse_args(argv)
     args.func(args)
