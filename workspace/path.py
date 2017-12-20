@@ -21,14 +21,14 @@ class Path(object):
             self.abs = os.path.realpath(path)
         else:
             self.abs = os.path.realpath(os.path.join(ws_root, path))
-        self._ws_root = ws_root
+        self.ws_root = ws_root
 
     def __repr__(self) -> str:
-        return 'Path({!r}, {!r})'.format(self.rel, self._ws_root)
+        return 'Path({!r}, {!r})'.format(self.rel, self.ws_root)
 
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, Path) and \
-            (self.abs, self._ws_root) == (other.abs, other._ws_root)
+            (self.abs, self.ws_root) == (other.abs, other.ws_root)
 
     def __ge__(self, other: Any) -> bool:
         return self.abs >= other.abs
@@ -46,11 +46,11 @@ class Path(object):
         return not self.__ge__(other)
 
     def __hash__(self) -> int:
-        return hash((self.abs, self._ws_root))
+        return hash((self.abs, self.ws_root))
 
     @property
     def rel(self) -> str:
-        return os.path.relpath(self.abs, self._ws_root)
+        return os.path.relpath(self.abs, self.ws_root)
 
     @property
     def shortest(self) -> str:
@@ -58,7 +58,7 @@ class Path(object):
 
     @property
     def in_workspace(self) -> bool:
-        return self.abs.startswith(self._ws_root)
+        return self.abs.startswith(self.ws_root)
 
     @property
     def basename(self) -> str:

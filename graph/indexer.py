@@ -44,6 +44,6 @@ class Indexer(object):
         elif len(candidates) > 1:
             log.info('Multiple parsers for file: {}'.format(path.abs))
 
-        syms = candidates[0].parse(path)
+        syms, imports = candidates[0].parse(path)
         self.db.update_file(path, syms)
         log.debug('Indexed: {}'.format(path.abs))

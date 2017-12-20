@@ -8,8 +8,13 @@
 
 import collections
 from graph.edge import Edge
-from typing import Set
+from typing import NamedTuple, Set
 from workspace.path import Path
+
+class Location(NamedTuple):
+    file: Path
+    line: int
+    column: int
 
 class Node(object):
     def __init__(self) -> None:
@@ -20,5 +25,3 @@ class File(Node):
     def __init__(self, path:Path) -> None:
         super(File, self).__init__()
         self.path = path
-
-Location = collections.namedtuple('Location', ['file', 'line', 'column'])

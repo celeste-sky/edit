@@ -36,7 +36,7 @@ def do_create(args:argparse.Namespace) -> None:
 def do_update(args:argparse.Namespace)->None:
     ws = Workspace(args.dir, must_exist=True)
     path = Path(args.path, ws.root_dir)
-    syms = Py3Parser().parse(path)
+    syms, imports = Py3Parser().parse(path)
     db = Sqlite(ws.symbol_index)
     try:
         db.update_file(path, syms)

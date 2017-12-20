@@ -11,7 +11,7 @@ from graph.db import Symbol, SymbolType
 import imp
 import logging
 import os.path
-from typing import Callable, Dict, IO, List, Optional, Tuple
+from typing import Any, Callable, Dict, IO, List, Optional, Tuple
 from workspace.path import Path
 
 # The signature of imp.find_module
@@ -23,8 +23,9 @@ def resolve_import(name:str, finder:Finder, extra_search:List[str]
         ) -> Tuple[Optional[str], List[str]]:
     '''
     Search for the given name using the given module finder, and optionally
-    search in the given additional search dirs.  Return the path for the named
-    module, and also a list of the paths for all of that module's parents.
+    search in the given additional search dirs.  Return the module's package
+    directory (if a package), and a list of paths to all of the module's
+    ancestors, ordered from most to least distant.
     '''
     if 'os.path' == name:
         # paper over dynamic import hijinks
@@ -65,14 +66,28 @@ def resolve_import(name:str, finder:Finder, extra_search:List[str]
     else:
         raise ImportError('Unknown module type: {}'.format(desc[2]))
 
+# XXX: coerce imp.find_module to Finder, because the real type is batshit
+default_finder: Any = imp.find_module
+
 class Py3Parser(object):
+    def __init__(self,
+            extra_search:List[str]=None, finder:Finder=default_finder) -> None:
+        self.extra_search = extra_search if extra_search else []
+        self.finder = finder
+
     def accept(self, path:Path) -> bool:
         '''
         Determine if this parser is suitable to parse the given path.
         '''
         return path.basename.lower().endswith(".py")
 
-    def parse(self, path:Path) -> List[Symbol]:
+    def parse(self, path:Path) -> Tuple[List[Symbol], List[Tuple[str, Path]]]:
+        '''
+        Parse the given file.  Return a list of symbols, and a list of
+        resolved imports (name->path) found in the file.
+        XXX: this is a weird place for import resolution...
+        '''
+
         with open(path.abs) as f:
             try:
                 tree = ast.parse(f.read())
@@ -80,29 +95,52 @@ class Py3Parser(object):
                 logging.info("Couldn't parse {}: {}".format(path, e))
                 raise
 
-        res:List[Symbol] = []
+        syms: List[Symbol] = []
+        imports: List[Tuple[str, bool]] = [] # (name, definitely_module)
         for n in ast.walk(tree):
             if isinstance(n, ast.Import):
                 for name in n.names:
-                    res.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                    syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
                         name.name, SymbolType.IMPORT))
+                    imports.append((name.name, True))
             if isinstance(n, ast.ImportFrom):
-                res.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
                     n.module, SymbolType.IMPORT))
+                imports.append((n.module, True))
                 for name in n.names:
-                    res.append(Symbol(path, n.lineno, n.col_offset, None, None,
-                        '{}.{}'.format(n.module, name.name), SymbolType.IMPORT))
+                    mod_name = '{}.{}'.format(n.module, name.name)
+                    syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                        mod_name, SymbolType.IMPORT))
+                    # These could either be modules, or names imported from
+                    # within a module.  Only way to find out is try to resolve
+                    # them.
+                    imports.append((mod_name, False))
             if isinstance(n, ast.FunctionDef):
-                res.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
                     n.name, SymbolType.FUNCTION))
             if isinstance(n, ast.ClassDef):
-                res.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
                     n.name, SymbolType.CLASS))
             if isinstance(n, ast.Call):
                 s = self._visit_call(path, n)
                 if s is not None:
-                    res.append(s)
-        return res
+                    syms.append(s)
+
+        resolved_imports: List[Tuple[str, Path]] = []
+        for s_name, definitely_module in imports:
+            try:
+                pkg_dir, paths = resolve_import(
+                    s_name, self.finder, self.extra_search)
+                if not paths:
+                    continue
+                resolved_imports.append((s_name, Path(
+                    os.path.realpath(paths[-1]), path.ws_root)))
+            except ImportError as e:
+                if definitely_module:
+                    logging.info('Failed to resolve {}:{}: {}'.format(
+                        path.abs, s_name, e))
+
+        return syms, resolved_imports
 
     def _visit_call(self, path:Path, call:ast.Call) -> Optional[Symbol]:
         # The most common cases are going to be calls of a name ("foo()") or
@@ -165,7 +203,13 @@ class Py3ParserTest(unittest.TestCase):
     def setUp(self) -> None:
         self.dir = tempfile.mkdtemp()
         self.src = Path('src.py', self.dir)
-        self.p = Py3Parser()
+        self.modules: ModuleMap = {
+            ('mod', ('/root/pkg/',)): ('/root/pkg/mod.py', imp.PY_SOURCE),
+            ('pkg', ('/root/',)): ('/root/pkg/', imp.PKG_DIRECTORY),
+            ('root', None): ('/root/', imp.PKG_DIRECTORY)
+        }
+        self.finder = make_finder(self.modules)
+        self.p = Py3Parser(finder=self.finder)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.dir)
@@ -173,7 +217,7 @@ class Py3ParserTest(unittest.TestCase):
     def test_function_def(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('def foo():\n  pass\n')
-        self.assertEqual(self.p.parse(self.src),
+        self.assertEqual(self.p.parse(self.src)[0],
             [Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.FUNCTION)])
 
     def test_nested_function(self) -> None:
@@ -183,14 +227,14 @@ class Py3ParserTest(unittest.TestCase):
                 '  def bar():',
                 '    pass',
                 '']))
-        self.assertEqual(self.p.parse(self.src), [
+        self.assertEqual(self.p.parse(self.src)[0], [
             Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.FUNCTION),
             Symbol(self.src, 2, 2, None, None, 'bar', SymbolType.FUNCTION)])
 
     def test_class(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('class Foo(object):\n  pass\n')
-        self.assertEqual(self.p.parse(self.src), [
+        self.assertEqual(self.p.parse(self.src)[0], [
             Symbol(self.src, 1, 0, None, None, 'Foo', SymbolType.CLASS)])
 
     def test_method(self) -> None:
@@ -200,23 +244,70 @@ class Py3ParserTest(unittest.TestCase):
                 '  def foo():',
                 '    pass',
                 '']))
-        self.assertEqual(self.p.parse(self.src), [
+        self.assertEqual(self.p.parse(self.src)[0], [
             Symbol(self.src, 1, 0, None, None, 'Foo', SymbolType.CLASS),
             Symbol(self.src, 2, 2, None, None, 'foo', SymbolType.FUNCTION)])
 
     def test_call_name(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('foo("bar", 42)')
-        self.assertEqual(self.p.parse(self.src), [
+        self.assertEqual(self.p.parse(self.src)[0], [
             Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.CALL)])
 
     def test_call_attr(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('foo.bar.baz(1, 2, 3)')
-        self.assertEqual(self.p.parse(self.src), [
+        self.assertEqual(self.p.parse(self.src)[0], [
             Symbol(self.src, 1, 0, None, None, 'baz', SymbolType.CALL)])
 
     def test_call_dict_item(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('dict["key"](42)')
-        self.assertEqual(self.p.parse(self.src), [])
+        self.assertEqual(self.p.parse(self.src)[0], [])
+
+    def test_load_empty(self) -> None:
+        open(self.src.abs, 'w').close()
+        self.assertEqual(self.p.parse(self.src)[1], [])
+
+    def test_load_malformed(self) -> None:
+        with open(self.src.abs, 'w') as f:
+            f.write('invalid python')
+        with self.assertRaisesRegex(SyntaxError, "invalid syntax"):
+            self.p.parse(self.src)
+
+    def test_load_import(self) -> None:
+        with open(self.src.abs, 'w') as f:
+            f.write('import root.pkg.mod')
+        _, imports = self.p.parse(self.src)
+        self.assertEqual(
+            set(path.abs for _, path in imports),
+            {'/root/pkg/mod.py'})
+
+    def test_load_multi_import_as(self) -> None:
+        with open(self.src.abs, 'w') as f:
+            f.write('import root.foo as f, root.pkg.mod as m')
+        self.modules.update({
+            ('foo', ('/root/',)): ('/root/foo.py', imp.PY_SOURCE)
+        })
+        _, imports = self.p.parse(self.src)
+        self.assertEqual(set(path.abs for _, path in imports),  {
+            '/root/foo.py',
+            '/root/pkg/mod.py'
+        })
+
+    def test_load_from_import_nonmod(self) -> None:
+        with open(self.src.abs, 'w') as f:
+            f.write('from root.pkg import Classy')
+        _, imports = self.p.parse(self.src)
+        self.assertEqual(set(path.abs for _, path in imports),
+            {'/root/pkg/__init__.py'})
+
+    def test_load_from_import_mod(self) -> None:
+        with open(self.src.abs, 'w') as f:
+            f.write('from root.pkg import mod')
+        _, imports = self.p.parse(self.src)
+        self.assertEqual(set(path.abs for _, path in imports),
+            {'/root/pkg/__init__.py', '/root/pkg/mod.py'})
+
+if __name__ == '__main__':
+    unittest.main()
