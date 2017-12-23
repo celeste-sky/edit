@@ -10,40 +10,61 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('GtkSource', '3.0')
 
+import argparse
 from gi.repository import Gtk, Gdk
 from graph.source_graph import SourceGraph
 import logging
 import os.path
 import signal
 import sys
+from typing import List
 from ui.main_window import MainWindow
-from workspace import Workspace
+from workspace import Workspace, initialize_workspace
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+def open_workspace(args:argparse.Namespace) -> Workspace:    
+    if args.create:
+        initialize_workspace(args.workspace)
+    if not os.path.isdir(args.workspace):
+        logging.warn(
+        'Workspace doesn\'t exist: {}'.format(args.workspace))
+    return Workspace(args.workspace)
     
-    app_dir = os.path.dirname(__file__)
-    
-    # Load default styling
-    with open(os.path.join(app_dir, 'default.css'), 'rb') as f:
-        css = f.read()
+def load_css(ws:Workspace) -> None:
+    '''
+    Check if an override stylesheet exists, and apply it if it does.
+    '''
+    css = ws.get_stylesheet()
+    if not css:
+        return
     style_provider = Gtk.CssProvider()
     style_provider.load_from_data(css)
     Gtk.StyleContext.add_provider_for_screen(
         Gdk.Screen.get_default(), style_provider,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+def main(argv:List[str]) -> None:
+    logging.basicConfig(level=logging.INFO)
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     
-    ws_dir = '.workspace'
-    if len(sys.argv) == 2:
-        ws_dir = sys.argv[1]
-    if not os.path.isdir(ws_dir):
-        logging.warn(
-        'Workspace doesn\'t exist: {}'.format(ws_dir))
-    workspace = Workspace(ws_dir)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--workspace', '-w', type=str, default='.workspace',
+        help='Workspace directory')
+    parser.set_defaults(create=False)
+    
+    subparsers = parser.add_subparsers()
+    create = subparsers.add_parser('create-workspace')
+    create.set_defaults(create=True)
+    
+    args = parser.parse_args(argv)
+    
+    workspace = open_workspace(args)
     src_graph = SourceGraph(workspace)
-        
+ 
+    load_css(workspace)
     win = MainWindow(workspace, src_graph)
     win.connect("delete-event", Gtk.main_quit)
     win.show_all()
     Gtk.main()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

@@ -13,6 +13,14 @@ from typing import Callable, Dict, List, Optional, Set
 
 from workspace.path import Path
 
+def initialize_workspace(path:str) -> None:
+    '''
+    Set up a new worspace directory at the given path.
+    '''
+    if os.path.exists(path):
+        raise Exception('Workspace already exists: {}'.format(path))
+    os.makedirs(path)
+
 class Workspace(object):
     def __init__(self, workspace_dir:str, must_exist:bool=False) -> None:
         self.workspace_dir = os.path.abspath(workspace_dir)
@@ -121,6 +129,17 @@ class Workspace(object):
     @property
     def symbol_index(self) -> Path:
         return Path(os.path.join(self.workspace_dir, 'index.db'), self.root_dir)
+        
+    def get_stylesheet(self) -> str:
+        '''
+        If custom CSS has been provided, return it.  May return None.
+        '''
+        css_path = os.path.join(self.workspace_dir, 'override.css')
+        if not os.path.exists(css_path):
+            return None
+        # NB: 'b' is important to the Gtk style loader
+        with open(css_path, 'rb') as f:
+            return f.read()
 
 import tempfile
 import unittest
