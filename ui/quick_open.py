@@ -14,7 +14,7 @@ from workspace.path import Path
 
 class QuickOpen(Gtk.VBox):
     __gsignals__ = {
-        'path-selected': (GObject.SIGNAL_ACTION, None, (UIPath,))
+        'path-selected': (GObject.SignalFlags.ACTION, None, (UIPath,))
     }
     
     def __init__(self, workspace):

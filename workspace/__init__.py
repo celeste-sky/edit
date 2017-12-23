@@ -131,7 +131,7 @@ class Workspace(object):
     def symbol_index(self) -> Path:
         return Path(os.path.join(self.workspace_dir, 'index.db'), self.root_dir)
         
-    def get_stylesheet(self) -> str:
+    def get_stylesheet(self) -> bytes:
         '''
         If custom CSS has been provided, return it.  May return None.
         '''
@@ -234,7 +234,7 @@ class WorkspaceTest(unittest.TestCase):
         os.mkdir(self.ws)
         w = Workspace(self.ws)
         opts = w.editor_options
-        self.assertEqual(len(opts), 9)
+        self.assertEqual(len(opts), 10)
         self.assertTrue(opts['auto-indent'])
 
     def test_editor_option_override_defaults(self) -> None:
@@ -243,7 +243,7 @@ class WorkspaceTest(unittest.TestCase):
             json.dump({'editor_options': {'indent-width': 42}}, f)
         w = Workspace(self.ws)
         opts = w.editor_options
-        self.assertEqual(len(opts), 9)
+        self.assertEqual(len(opts), 10)
         self.assertEqual(opts['indent-width'], 42)
 
 if __name__ == '__main__':

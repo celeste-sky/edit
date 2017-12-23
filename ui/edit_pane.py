@@ -17,7 +17,7 @@ Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
     __gsignals__ = {
-        'switch-file': (GObject.SIGNAL_ACTION, None, (UIPath,))
+        'switch-file': (GObject.SignalFlags.ACTION, None, (UIPath,))
     }
 
     def __init__(self, root_window, workspace, src_graph, *args, **kwargs):
@@ -86,7 +86,7 @@ class EditPane(Gtk.Notebook):
         self.tabs.append(Tab(view, buf, path))
 
         display_path = self._to_display_path(path)
-        self.append_page(scroll, Gtk.Label(display_path))
+        self.append_page(scroll, Gtk.Label(label=display_path))
         self.show_all()
         self.set_current_page(len(self.tabs) - 1)
 

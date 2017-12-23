@@ -23,7 +23,7 @@ class EdgeView(Gtk.VBox):
     INCOMING = "incoming"
     
     __gsignals__ = {
-        'location-selected': (GObject.SIGNAL_ACTION, None, (UILocation,))
+        'location-selected': (GObject.SignalFlags.ACTION, None, (UILocation,))
     }
     
     def __init__(self, edge_type):
@@ -32,7 +32,7 @@ class EdgeView(Gtk.VBox):
         self.cur_node = None
         self.edges = []
         
-        self.label = Gtk.Label('Edges: '+edge_type)
+        self.label = Gtk.Label(label='Edges: '+edge_type)
         self.pack_start(self.label, expand=False, fill=False, padding=0)
         
         self.tree_view = Gtk.TreeView(headers_visible=False)
