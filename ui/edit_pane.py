@@ -29,9 +29,9 @@ class EditPane(Gtk.Notebook):
         self.tabs = []
         self.connect('switch-page', self.change_page_handler)
 
-        # XXX do this properly
         style_manager = GtkSource.StyleSchemeManager.get_default()
-        self.style_scheme = style_manager.get_scheme("solarized-dark")
+        self.style_scheme = style_manager.get_scheme(
+            workspace.editor_options.get('style', 'classic'))
 
         for path in self.workspace.open_files:
             self._open_file(path)
@@ -66,8 +66,11 @@ class EditPane(Gtk.Notebook):
             except IOError as e:
                 content = ''
                 logging.info("Couldn't open {}: {}".format(path, e))
-
-        view = GtkSource.View(**self.workspace.editor_options)
+                
+        # XXX make this less of a hack
+        view_opts = self.workspace.editor_options
+        view_opts.pop('style', None)
+        view = GtkSource.View(**view_opts)
 
         buf = GtkSource.Buffer()
         if path:

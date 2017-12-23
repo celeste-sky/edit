@@ -113,6 +113,7 @@ class Workspace(object):
     def editor_options(self) -> Dict:
         # populate some defaults:
         res = {
+            'style': 'solarized-light',
             'auto-indent': True,
             'indent-width': 4,
             'tab-width': 4,
