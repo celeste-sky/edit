@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # Install needed dependencies.  Obviously Debian-specific, and probably
-# Ubuntu-specific.  Tested on Ubuntu 16.04, 17.10
+# Ubuntu-specific.  Tested on Ubuntu 17.10, which is probably the current
+# minimum, for python 3.6.
 
 set -e
 
