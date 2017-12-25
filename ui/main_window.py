@@ -163,5 +163,9 @@ class MainWindow(Gtk.Window):
             self.finder = Finder()
             self.edit_box.pack_start(self.finder, False, False, 0)
             self.finder.connect('dismiss', lambda _: self.finder.hide())
+            self.finder.connect('search-changed', 
+                lambda _, s: self.edit_pane.find_handler(s))
+            self.finder.connect('next', lambda _, s: self.edit_pane.find_handler(s, 1))
+            self.finder.connect('prev', lambda _, s: self.edit_pane.find_handler(s, -1))
         self.finder.show_all()
         self.finder.entry.grab_focus()
