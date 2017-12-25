@@ -6,7 +6,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-from enum import Enum
+from graph.symbol import Symbol, SymbolType
 import os.path
 import sqlite3
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
@@ -15,24 +15,6 @@ from workspace.path import Path
 class DBException(Exception):
     def __init__(self, msg: str) -> None:
         super(DBException, self).__init__(msg)
-
-class SymbolType(Enum):
-    CLASS = 1
-    FUNCTION = 2
-    VALUE = 3
-
-    CALL = 100
-    REFERENCE = 101
-    IMPORT = 102
-
-class Symbol(NamedTuple):
-    path: Path
-    line: int
-    column: int
-    end_line: Optional[int]
-    end_column: Optional[int]
-    name: str
-    sym_type: SymbolType
 
 class Sqlite(object):
     SCHEMA_VERSION = "1"

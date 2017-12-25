@@ -8,13 +8,13 @@
 
 import collections
 from graph.edge import Edge
-from typing import NamedTuple, Set
+from typing import NamedTuple, Set, Optional
 from workspace.path import Path
 
 class Location(NamedTuple):
     file: Path
     line: int
-    column: int
+    column: Optional[int]
 
 class Node(object):
     def __init__(self) -> None:
