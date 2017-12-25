@@ -12,7 +12,6 @@ from ui.edit_pane import EditPane
 from ui.quick_open import QuickOpen
 from workspace.path import Path
 
-
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
         super(MainWindow, self).__init__(
