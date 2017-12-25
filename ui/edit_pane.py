@@ -18,7 +18,16 @@ from workspace.workspace import Workspace
 
 log = logging.getLogger(__name__)
 
-Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
+class Tab(object):
+    def __init__(self,
+            src_view:GtkSource.View, 
+            buffer:GtkSource.Buffer,
+            path:Path, 
+            search_ctx:GtkSource.SearchContext=None) -> None:
+        self.src_view = src_view
+        self.buffer = buffer
+        self.path = path
+        self.search_ctx = search_ctx
 
 class EditPane(Gtk.Notebook):
     __gsignals__ = {
@@ -62,8 +71,12 @@ class EditPane(Gtk.Notebook):
         self._open_file(path)
         self._update_open_files()
 
+    @property
+    def current_tab(self) -> Tab:
+        return self.tabs[self.get_current_page()]
+        
     def get_current_path(self)->Path:
-        return self.tabs[self.get_current_page()].path
+        return self.current_tab.path
 
     def _update_open_files(self)->None:
         self.workspace.open_files = [i.path for i in self.tabs if i.path]
@@ -104,26 +117,26 @@ class EditPane(Gtk.Notebook):
         self.open_file()
 
     def changed_handler(self, widget:Gtk.Widget)->None:
-        tab = self.tabs[self.get_current_page()]
         self.set_tab_label_text(
-            tab.src_view.get_parent(), "* "+self._to_display_path(tab.path))
+            self.current_tab.src_view.get_parent(),
+            "* "+self._to_display_path(self.current_tab.path))
 
     def save_handler(self, widget:Gtk.Widget)->None:
         tab = self.tabs[self.get_current_page()]
 
         if not tab.path:
+            # XXX: deprecated use of positional args:
             dialog = Gtk.FileChooserDialog(
                 "Save File",
                 self.root_window,
                 Gtk.FileChooserAction.SAVE,
+                # XXX: deprecated button list:
                 (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                 Gtk.STOCK_SAVE, Gtk.ResponseType.ACCEPT))
             dialog.set_current_folder(self.workspace.root_dir)
             res = dialog.run()
             if res == Gtk.ResponseType.ACCEPT:
-                tab = Tab(tab.src_view, tab.buffer,
-                    Path(dialog.get_filename(), self.workspace.root_dir))
-                self.tabs[self.get_current_page()] = tab
+                tab.path = Path(dialog.get_filename(), self.workspace.root_dir)
                 self._update_open_files()
                 dialog.destroy()
             else:
@@ -159,7 +172,7 @@ class EditPane(Gtk.Notebook):
         If move is nonzero, move that many matches forward (neg for back)
         '''
         log.info('Find {}, {}'.format(pattern, move))
-        buf = self.tabs[self.get_current_page()].buffer
+        buf = self.current_tab.buffer
         settings = GtkSource.SearchSettings(search_text=pattern)
         self.search_ctx = GtkSource.SearchContext(buffer=buf, settings=settings)
 
