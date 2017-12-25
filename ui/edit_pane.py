@@ -159,6 +159,9 @@ class EditPane(Gtk.Notebook):
         If move is nonzero, move that many matches forward (neg for back)
         '''
         log.info('Find {}, {}'.format(pattern, move))
+        buf = self.tabs[self.get_current_page()].buffer
+        settings = GtkSource.SearchSettings(search_text=pattern)
+        self.search_ctx = GtkSource.SearchContext(buffer=buf, settings=settings)
 
 def sandbox()->None:
     import unittest.mock as mock
