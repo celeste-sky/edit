@@ -152,9 +152,6 @@ class EditPane(Gtk.Notebook):
             self, _widget:Gtk.Widget, _page:Any, index:int)->None:
         if self.tabs[index].path is not None:
             self.emit('switch-file', UIPath(self.tabs[index].path))
-            
-    def find_handler(self, widget:Gtk.Widget)->None:
-        log.info("Find!")
 
 def sandbox()->None:
     import unittest.mock as mock

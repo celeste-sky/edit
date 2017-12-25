@@ -7,10 +7,14 @@
 # (at your option) any later version.
 
 from gi.repository import Gdk, GObject, Gtk
+import logging
 from ui.edge_view import EdgeView
 from ui.edit_pane import EditPane
+from ui.finder import Finder
 from ui.quick_open import QuickOpen
 from workspace.path import Path
+
+log = logging.getLogger(__name__)
 
 class MainWindow(Gtk.Window):
     def __init__(self, workspace, src_graph):
@@ -19,6 +23,7 @@ class MainWindow(Gtk.Window):
         self.workspace = workspace
         self.src_graph = src_graph
         self.edit_pane = EditPane(self, self.workspace, self.src_graph)
+        self.finder = None
         self.quick_open = QuickOpen(self.workspace)
         self.outgoing_edges = EdgeView(EdgeView.OUTGOING)
         self.incoming_edges = EdgeView(EdgeView.INCOMING)
@@ -40,10 +45,15 @@ class MainWindow(Gtk.Window):
         self.left_nav.pack_start(
             self.incoming_edges, expand=True, fill=True, padding=0)
 
+        # edit box initially contains the edit pane, and later may add a Finder
+        # (creation of Finder is deferred to avoid it being shown by initial show_all())
+        self.edit_box = Gtk.VBox()
+        self.edit_box.pack_start(self.edit_pane, True, True, 0)
+
         # hbox lays our edit pane with navigation panels on sides
         self.hbox = Gtk.HBox()
         self.hbox.pack_start(self.left_nav, False, False, 0)
-        self.hbox.pack_start(self.edit_pane, True, True, 0)
+        self.hbox.pack_start(self.edit_box, True, True, 0)
         self.quick_open.register_accelerators(self.accelerators)
 
         # Top level vbox adds menubar
@@ -86,7 +96,7 @@ class MainWindow(Gtk.Window):
         key, mod = Gtk.accelerator_parse("<Control>f")
         find.add_accelerator(
             "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
-        find.connect("activate", self.edit_pane.find_handler)
+        find.connect("activate", self.find_handler)
         edit_menu.add(find)
         
         self.menu_bar.add(edit_menu_item)
@@ -146,3 +156,12 @@ class MainWindow(Gtk.Window):
             self.edit_pane.open_file(Path(
                 dialog.get_filename(), self.workspace.root_dir))
         dialog.destroy()
+                    
+    def find_handler(self, widget:Gtk.Widget)->None:
+        if not self.finder:
+            # First use of finder, create it
+            self.finder = Finder()
+            self.edit_box.pack_start(self.finder, False, False, 0)
+            self.finder.connect('dismiss', lambda _: self.finder.hide())
+        self.finder.show_all()
+        self.finder.entry.grab_focus()
