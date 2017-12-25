@@ -11,7 +11,7 @@ from graph.py_file import PyFile, new_file
 from graph.node import Node
 import logging
 from typing import Dict, List, Tuple
-from workspace import Workspace
+from workspace.workspace import Workspace
 from workspace.path import Path
 
 class SourceGraph(object):

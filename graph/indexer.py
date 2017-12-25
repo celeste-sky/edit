@@ -10,7 +10,7 @@ from graph.db import Sqlite
 from graph.parsers.python3 import Py3Parser
 import logging
 from typing import List
-from workspace import Workspace
+from workspace.workspace import Workspace
 from workspace.path import Path
 
 log = logging.getLogger(__name__)

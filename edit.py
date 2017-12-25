@@ -19,7 +19,7 @@ import signal
 import sys
 from typing import List
 from ui.main_window import MainWindow
-from workspace import Workspace, initialize_workspace
+from workspace.workspace import Workspace, initialize_workspace
 
 def open_workspace(args:argparse.Namespace) -> Workspace:    
     if args.create:

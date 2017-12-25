@@ -15,7 +15,7 @@ import os.path
 import shutil
 import sys
 from typing import List
-from workspace import Workspace
+from workspace.workspace import Workspace
 from workspace.path import Path
 
 def do_create(args:argparse.Namespace) -> None:
