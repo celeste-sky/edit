@@ -17,7 +17,7 @@ class DBException(Exception):
         super(DBException, self).__init__(msg)
 
 class Sqlite(object):
-    SCHEMA_VERSION = "1"
+    SCHEMA_VERSION = "2"
 
     def __init__(self, db_path: Path, create: bool=False) -> None:
         need_create = False
@@ -53,8 +53,6 @@ class Sqlite(object):
                     file integer NOT NULL,
                     line integer NOT NULL,
                     column integer NOT NULL,
-                    end_line integer,
-                    end_col integer,
                     name text NOT NULL,
                     type integer NOT NULL,
                     FOREIGN KEY (file) REFERENCES files(id)
@@ -117,9 +115,8 @@ class Sqlite(object):
             assert file_id is not None
 
             self.conn.executemany(
-                'INSERT INTO symbols VALUES (?,?,?,?,?,?,?)',
-                [(file_id, s.line, s.column, s.end_line, s.end_column,
-                    s.name, s.sym_type.value) for s in symbols])
+                'INSERT INTO symbols VALUES (?,?,?,?,?)',
+                [(file_id, s.line, s.column, s.name, s.sym_type.value) for s in symbols])
             self.conn.executemany(
                 'INSERT INTO imports VALUES (?,?,?)',
                 [(file_id, name, path.abs) for name, path in imports])
@@ -136,7 +133,7 @@ class Sqlite(object):
             c = self.conn.cursor()
             c.execute(
                 '''
-                    SELECT line, column, end_line, end_col, name, type
+                    SELECT line, column, name, type
                     FROM symbols
                     WHERE file=?
                     ORDER BY line, column
@@ -144,7 +141,7 @@ class Sqlite(object):
                 (file_id,))
             res = c.fetchall()
         return [
-            Symbol(path, r[0], r[1], r[2], r[3], r[4], SymbolType(r[5]))
+            Symbol(path, r[0], r[1], r[2], SymbolType(r[3]))
             for r in res
         ]
 
@@ -236,8 +233,7 @@ class Sqlite(object):
         if res is None:
             return None
         else:
-            return Symbol(path, res[1], res[2], res[3], res[4], res[5],
-                SymbolType(res[6]))
+            return Symbol(path, res[1], res[2], res[3], SymbolType(res[4]))
 
     def _do_search(self, filter:str, params:Tuple, path_root:str
             ) -> List[Symbol]:
@@ -249,7 +245,7 @@ class Sqlite(object):
             c = self.conn.cursor()
             c.execute(
                 '''
-                    SELECT path, line, column, end_line, end_col, name, type
+                    SELECT path, line, column, name, type
                     FROM symbols
                     INNER JOIN files ON symbols.file=files.id
                     WHERE name=? {}
@@ -259,8 +255,8 @@ class Sqlite(object):
             res = c.fetchall()
         if res is None:
             return []
-        return [Symbol(Path(r[0], path_root), r[1], r[2], r[3], r[4], r[5],
-            SymbolType(r[6])) for r in res]
+        return [Symbol(Path(r[0], path_root), r[1], r[2], r[3],
+            SymbolType(r[4])) for r in res]
 
 
     def find_definitions(self,
@@ -344,12 +340,12 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)],
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)],
             [('bar', Path('bar', self.temp_dir))])
         with self.db.conn:
             s = self.db.conn.execute('SELECT * FROM symbols').fetchall()
             self.assertEqual(s, [
-                (1, 42, 12, None, None, 'foo', SymbolType.CLASS.value)])
+                (1, 42, 12, 'foo', SymbolType.CLASS.value)])
             i = self.db.conn.execute('SELECT * FROM imports').fetchall()
             self.assertEqual(i, [
                 (1, 'bar', os.path.join(self.temp_dir, 'bar'))])
@@ -358,15 +354,15 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)],
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)],
             [('bar', Path('bar', self.temp_dir))])
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'bar', SymbolType.FUNCTION)],
+            [Symbol(p, 42, 12, 'bar', SymbolType.FUNCTION)],
             [('bar', Path('bar', self.temp_dir))])
         with self.db.conn:
             s = self.db.conn.execute('SELECT * FROM symbols').fetchall()
             self.assertEqual(s, [
-                (1, 42, 12, None, None, 'bar', SymbolType.FUNCTION.value)])
+                (1, 42, 12, 'bar', SymbolType.FUNCTION.value)])
             i = self.db.conn.execute('SELECT * FROM imports').fetchall()
             self.assertEqual(i, [
                 (1, 'bar', os.path.join(self.temp_dir, 'bar'))])
@@ -375,15 +371,15 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)], [])
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)], [])
         self.assertEqual(self.db.find_symbol_at(p, 42),
-            Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS))
+            Symbol(p, 42, 12, 'foo', SymbolType.CLASS))
 
     def test_find_no_symbol(self) -> None:
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)], [])
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)], [])
         self.assertIsNone(self.db.find_symbol_at(p, 43))
 
     def test_find_symbol_with_col(self) -> None:
@@ -391,37 +387,37 @@ class SqliteTest(unittest.TestCase):
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
             [
-                Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS),
-                Symbol(p, 42, 20, None, None, 'bar', SymbolType.FUNCTION),
-                Symbol(p, 42, 40, None, None, 'baz', SymbolType.REFERENCE)
+                Symbol(p, 42, 12, 'foo', SymbolType.CLASS),
+                Symbol(p, 42, 20, 'bar', SymbolType.FUNCTION),
+                Symbol(p, 42, 40, 'baz', SymbolType.REFERENCE)
             ],[])
         self.assertEqual(self.db.find_symbol_at(p, 42, 30),
-            Symbol(p, 42, 20, None, None, 'bar', SymbolType.FUNCTION))
+            Symbol(p, 42, 20, 'bar', SymbolType.FUNCTION))
 
     def create_sybmols(self) -> None:
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
             [
-                Symbol(p, 1, 0, 100, 40, 'Foo', SymbolType.CLASS),
-                Symbol(p, 2, 4, 4, 10, '__init__', SymbolType.FUNCTION),
-                Symbol(p, 3, 8, 3, 20, 'foo', SymbolType.VALUE),
-                Symbol(p, 4, 8, 4, 20, 'bar', SymbolType.VALUE),
-                Symbol(p, 6, 4, 8, 20, 'frobnosticate', SymbolType.FUNCTION),
-                Symbol(p, 7, 8, 7, 30, 'clobber', SymbolType.CALL),
-                Symbol(p, 7, 20, 7, 24, 'BOOP', SymbolType.REFERENCE),
-                Symbol(p, 8, 0, 8, 10, 'bar', SymbolType.IMPORT)
+                Symbol(p, 1, 0, 'Foo', SymbolType.CLASS),
+                Symbol(p, 2, 4, '__init__', SymbolType.FUNCTION),
+                Symbol(p, 3, 8, 'foo', SymbolType.VALUE),
+                Symbol(p, 4, 8, 'bar', SymbolType.VALUE),
+                Symbol(p, 6, 4,  'frobnosticate', SymbolType.FUNCTION),
+                Symbol(p, 7, 8, 'clobber', SymbolType.CALL),
+                Symbol(p, 7, 20, 'BOOP', SymbolType.REFERENCE),
+                Symbol(p, 8, 0, 'bar', SymbolType.IMPORT)
             ],[])
         p = Path('bar', self.temp_dir)
         self.db.update_file(p,
             [
-                Symbol(p, 1, 0, 1, 4, 'BOOP', SymbolType.VALUE),
-                Symbol(p, 2, 0, 40, 50, 'bar', SymbolType.CLASS),
-                Symbol(p, 3, 4, 4, 40, '__init__', SymbolType.FUNCTION),
-                Symbol(p, 4, 8, 4, 20, 'bar', SymbolType.VALUE),
-                Symbol(p, 6, 4, 10, 30, 'frobnosticate', SymbolType.FUNCTION),
-                Symbol(p, 7, 8, 7, 20, 'bar', SymbolType.REFERENCE),
-                Symbol(p, 9, 4, 10, 20, 'bar', SymbolType.FUNCTION),
-                Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL)
+                Symbol(p, 1, 0, 'BOOP', SymbolType.VALUE),
+                Symbol(p, 2, 0, 'bar', SymbolType.CLASS),
+                Symbol(p, 3, 4, '__init__', SymbolType.FUNCTION),
+                Symbol(p, 4, 8,  'bar', SymbolType.VALUE),
+                Symbol(p, 6, 4, 'frobnosticate', SymbolType.FUNCTION),
+                Symbol(p, 7, 8, 'bar', SymbolType.REFERENCE),
+                Symbol(p, 9, 4, 'bar', SymbolType.FUNCTION),
+                Symbol(p, 10, 8, 'bar', SymbolType.CALL)
             ], [])
 
     def test_find_no_def(self) -> None:
@@ -435,7 +431,7 @@ class SqliteTest(unittest.TestCase):
         p = Path('foo', self.temp_dir)
         self.assertEqual(
             self.db.find_definitions('Foo', path_root=self.temp_dir),
-            [Symbol(p, 1, 0, 100, 40, 'Foo', SymbolType.CLASS)])
+            [Symbol(p, 1, 0, 'Foo', SymbolType.CLASS)])
 
     def test_find_multiple_defs(self) -> None:
         self.create_db()
@@ -444,11 +440,11 @@ class SqliteTest(unittest.TestCase):
         self.assertEqual(
             set(self.db.find_definitions('bar', path_root=self.temp_dir)),
             set([
-                Symbol(Path('foo', self.temp_dir), 4, 8, 4, 20, 'bar',
+                Symbol(Path('foo', self.temp_dir), 4, 8, 'bar',
                     SymbolType.VALUE),
-                Symbol(p, 2, 0, 40, 50, 'bar', SymbolType.CLASS),
-                Symbol(p, 4, 8, 4, 20, 'bar', SymbolType.VALUE),
-                Symbol(p, 9, 4, 10, 20, 'bar', SymbolType.FUNCTION)
+                Symbol(p, 2, 0, 'bar', SymbolType.CLASS),
+                Symbol(p, 4, 8, 'bar', SymbolType.VALUE),
+                Symbol(p, 9, 4, 'bar', SymbolType.FUNCTION)
             ]))
 
     def test_find_fn_def(self) -> None:
@@ -458,7 +454,7 @@ class SqliteTest(unittest.TestCase):
         self.assertEqual(
             self.db.find_definitions(
                 'bar', path_root=self.temp_dir, typ=SymbolType.CLASS),
-            [Symbol(p, 2, 0, 40, 50, 'bar', SymbolType.CLASS)])
+            [Symbol(p, 2, 0, 'bar', SymbolType.CLASS)])
 
     def test_find_multiple_refs(self) -> None:
         self.create_db()
@@ -467,10 +463,10 @@ class SqliteTest(unittest.TestCase):
         self.assertEqual(
             set(self.db.find_references('bar', path_root=self.temp_dir)),
             set([
-                Symbol(p, 7, 8, 7, 20, 'bar', SymbolType.REFERENCE),
-                Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL),
+                Symbol(p, 7, 8, 'bar', SymbolType.REFERENCE),
+                Symbol(p, 10, 8, 'bar', SymbolType.CALL),
                 Symbol(Path('foo', self.temp_dir),
-                    8, 0, 8, 10, 'bar', SymbolType.IMPORT)
+                    8, 0,  'bar', SymbolType.IMPORT)
             ]))
 
     def test_find_call(self) -> None:
@@ -480,20 +476,20 @@ class SqliteTest(unittest.TestCase):
         self.assertEqual(
             self.db.find_references(
                 'bar', path_root=self.temp_dir, typ=SymbolType.CALL),
-            [Symbol(p, 10, 8, 10, 20, 'bar', SymbolType.CALL)])
+            [Symbol(p, 10, 8, 'bar', SymbolType.CALL)])
 
     def test_multi_syms_at_location(self) -> None:
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
             [
-                Symbol(p, 1, 0, None, None, 'graph', SymbolType.IMPORT),
-                Symbol(p, 1, 0, None, None, 'graph.db', SymbolType.IMPORT)
+                Symbol(p, 1, 0, 'graph', SymbolType.IMPORT),
+                Symbol(p, 1, 0, 'graph.db', SymbolType.IMPORT)
             ], [])
         # XXX: figure out what the UI really wants when there are multiple
         # symbols at the same location.
         self.assertEqual(self.db.find_symbol_at(p, 1, 0),
-            Symbol(p, 1, 0, None, None, 'graph', SymbolType.IMPORT))
+            Symbol(p, 1, 0, 'graph', SymbolType.IMPORT))
 
     def test_dump_no_such_file(self) -> None:
         self.create_db()
@@ -511,10 +507,10 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p,
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)],
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)],
             [])
         self.assertEqual(self.db.dump_file(p),
-            [Symbol(p, 42, 12, None, None, 'foo', SymbolType.CLASS)])
+            [Symbol(p, 42, 12, 'foo', SymbolType.CLASS)])
 
     def test_dump_no_imports(self) -> None:
         self.create_db()
@@ -526,8 +522,8 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p, [
-                Symbol(p, 1, 0, None, None, 'foo', SymbolType.IMPORT),
-                Symbol(p, 2, 0, None, None, 'bar', SymbolType.IMPORT)
+                Symbol(p, 1, 0, 'foo', SymbolType.IMPORT),
+                Symbol(p, 2, 0, 'bar', SymbolType.IMPORT)
             ],
             [
                 ('foo', p),
@@ -539,8 +535,8 @@ class SqliteTest(unittest.TestCase):
         self.create_db()
         p = Path('foo', self.temp_dir)
         self.db.update_file(p, [
-                Symbol(p, 1, 0, None, None, 'foo', SymbolType.IMPORT),
-                Symbol(p, 2, 0, None, None, 'bar', SymbolType.IMPORT)
+                Symbol(p, 1, 0, 'foo', SymbolType.IMPORT),
+                Symbol(p, 2, 0, 'bar', SymbolType.IMPORT)
             ],
             [
                 ('foo', p),

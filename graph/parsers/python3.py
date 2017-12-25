@@ -7,7 +7,7 @@
 # (at your option) any later version.
 
 import ast
-from graph.db import Symbol, SymbolType
+from graph.symbol import Symbol, SymbolType
 import imp
 import logging
 import os.path
@@ -102,26 +102,26 @@ class Py3Parser(object):
         for n in ast.walk(tree):
             if isinstance(n, ast.Import):
                 for name in n.names:
-                    syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                    syms.append(Symbol(path, n.lineno, n.col_offset, 
                         name.name, SymbolType.IMPORT))
                     imports.append((name.name, True))
             if isinstance(n, ast.ImportFrom):
-                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset,
                     n.module, SymbolType.IMPORT))
                 imports.append((n.module, True))
                 for name in n.names:
                     mod_name = '{}.{}'.format(n.module, name.name)
-                    syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                    syms.append(Symbol(path, n.lineno, n.col_offset,
                         mod_name, SymbolType.IMPORT))
                     # These could either be modules, or names imported from
                     # within a module.  Only way to find out is try to resolve
                     # them.
                     imports.append((mod_name, False))
             if isinstance(n, ast.FunctionDef):
-                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset, 
                     n.name, SymbolType.FUNCTION))
             if isinstance(n, ast.ClassDef):
-                syms.append(Symbol(path, n.lineno, n.col_offset, None, None,
+                syms.append(Symbol(path, n.lineno, n.col_offset,
                     n.name, SymbolType.CLASS))
             if isinstance(n, ast.Call):
                 s = self._visit_call(path, n)
@@ -149,10 +149,10 @@ class Py3Parser(object):
         # an attr ("obj.foo()").  Of course, the func could be any expression, but
         # won't attempt to do anything with the more obscure cases for now.
         if isinstance(call.func, ast.Name):
-            return Symbol(path, call.lineno, call.col_offset, None, None,
+            return Symbol(path, call.lineno, call.col_offset, 
                 call.func.id, SymbolType.CALL)
         elif isinstance(call.func, ast.Attribute):
-            return Symbol(path, call.lineno, call.col_offset, None, None,
+            return Symbol(path, call.lineno, call.col_offset, 
                 call.func.attr, SymbolType.CALL)
         else:
             return None
@@ -220,7 +220,7 @@ class Py3ParserTest(unittest.TestCase):
         with open(self.src.abs, 'w') as f:
             f.write('def foo():\n  pass\n')
         self.assertEqual(self.p.parse(self.src)[0],
-            [Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.FUNCTION)])
+            [Symbol(self.src, 1, 0, 'foo', SymbolType.FUNCTION)])
 
     def test_nested_function(self) -> None:
         with open(self.src.abs, 'w') as f:
@@ -230,14 +230,14 @@ class Py3ParserTest(unittest.TestCase):
                 '    pass',
                 '']))
         self.assertEqual(self.p.parse(self.src)[0], [
-            Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.FUNCTION),
-            Symbol(self.src, 2, 2, None, None, 'bar', SymbolType.FUNCTION)])
+            Symbol(self.src, 1, 0, 'foo', SymbolType.FUNCTION),
+            Symbol(self.src, 2, 2, 'bar', SymbolType.FUNCTION)])
 
     def test_class(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('class Foo(object):\n  pass\n')
         self.assertEqual(self.p.parse(self.src)[0], [
-            Symbol(self.src, 1, 0, None, None, 'Foo', SymbolType.CLASS)])
+            Symbol(self.src, 1, 0, 'Foo', SymbolType.CLASS)])
 
     def test_method(self) -> None:
         with open(self.src.abs, 'w') as f:
@@ -247,20 +247,20 @@ class Py3ParserTest(unittest.TestCase):
                 '    pass',
                 '']))
         self.assertEqual(self.p.parse(self.src)[0], [
-            Symbol(self.src, 1, 0, None, None, 'Foo', SymbolType.CLASS),
-            Symbol(self.src, 2, 2, None, None, 'foo', SymbolType.FUNCTION)])
+            Symbol(self.src, 1, 0, 'Foo', SymbolType.CLASS),
+            Symbol(self.src, 2, 2, 'foo', SymbolType.FUNCTION)])
 
     def test_call_name(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('foo("bar", 42)')
         self.assertEqual(self.p.parse(self.src)[0], [
-            Symbol(self.src, 1, 0, None, None, 'foo', SymbolType.CALL)])
+            Symbol(self.src, 1, 0,'foo', SymbolType.CALL)])
 
     def test_call_attr(self) -> None:
         with open(self.src.abs, 'w') as f:
             f.write('foo.bar.baz(1, 2, 3)')
         self.assertEqual(self.p.parse(self.src)[0], [
-            Symbol(self.src, 1, 0, None, None, 'baz', SymbolType.CALL)])
+            Symbol(self.src, 1, 0, 'baz', SymbolType.CALL)])
 
     def test_call_dict_item(self) -> None:
         with open(self.src.abs, 'w') as f:

@@ -27,7 +27,5 @@ class Symbol(NamedTuple):
     path: Path
     line: int
     column: int
-    end_line: Optional[int]
-    end_column: Optional[int]
     name: str
     sym_type: SymbolType
