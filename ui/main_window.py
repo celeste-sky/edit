@@ -75,6 +75,24 @@ class MainWindow(Gtk.Window):
                 self.src_graph.find_file(p.path)))
 
     def _build_menus(self):
+        self._build_file_menu()
+        self._build_edit_menu()
+        
+    def _build_edit_menu(self):
+        edit_menu_item = Gtk.MenuItem(label="Edit")
+        edit_menu = Gtk.Menu()
+        edit_menu_item.set_submenu(edit_menu)
+        
+        find = Gtk.MenuItem(label="Find")
+        key, mod = Gtk.accelerator_parse("<Control>f")
+        find.add_accelerator(
+            "activate", self.accelerators, key, mod, Gtk.AccelFlags.VISIBLE)
+        find.connect("activate", self.edit_pane.find_handler)
+        edit_menu.add(find)
+        
+        self.menu_bar.add(edit_menu_item)
+    
+    def _build_file_menu(self):
         file_menu_item = Gtk.MenuItem(label="File")
         file_menu = Gtk.Menu()
         file_menu_item.set_submenu(file_menu)
