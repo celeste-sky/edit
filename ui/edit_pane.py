@@ -11,7 +11,7 @@ from graph.source_graph import SourceGraph
 from gi.repository import Gtk, GObject, GtkSource
 import logging
 import os.path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from ui.wrappers import UIPath
 from workspace.path import Path
 from workspace.workspace import Workspace
@@ -23,11 +23,13 @@ class Tab(object):
             src_view:GtkSource.View, 
             buffer:GtkSource.Buffer,
             path:Path, 
-            search_ctx:GtkSource.SearchContext=None) -> None:
+            search_ctx:GtkSource.SearchContext=None,
+            search_pos:Tuple[int, int]=None) -> None:
         self.src_view = src_view
         self.buffer = buffer
         self.path = path
         self.search_ctx = search_ctx
+        self.search_pos = search_pos
 
 class EditPane(Gtk.Notebook):
     __gsignals__ = {
@@ -171,10 +173,46 @@ class EditPane(Gtk.Notebook):
         Update the current buffer to highlight the given pattern.
         If move is nonzero, move that many matches forward (neg for back)
         '''
-        log.info('Find {}, {}'.format(pattern, move))
-        buf = self.current_tab.buffer
-        settings = GtkSource.SearchSettings(search_text=pattern)
-        self.search_ctx = GtkSource.SearchContext(buffer=buf, settings=settings)
+        if self.current_tab.search_ctx:
+            # Already have a  search context; update it / move
+            ctx = self.current_tab.search_ctx
+            settings = ctx.get_settings()
+            if settings.get_search_text() != pattern:
+                ctx.get_settings().set_search_text(pattern)
+            if move == 0:
+                return
+            # If a a move was requested, search for the next match
+            found = False
+            # Get an iterator, clamping to end of file / end of line if the buffer
+            # has been modified.
+            search_iter = self.current_tab.buffer.get_iter_at_line(min(
+                self.current_tab.search_pos[0], 
+                self.current_tab.buffer.get_line_count() - 1))
+            search_iter.forward_chars(min(
+                self.current_tab.search_pos[1], search_iter.get_chars_in_line()-1))
+            if move > 0:
+                (found, start, end) = ctx.forward(search_iter)
+            elif move < 0:
+                # Reverse start/end, mostly so that the logic choosing "end" as 
+                # search_pos below is straightforward
+                (found, end, start) = ctx.backward(search_iter)
+            # If a match was found, scroll to it and select it.
+            if found:
+                # Use the end of the match, so that we will move past on the next
+                # search.
+                self.current_tab.search_pos = (end.get_line(), end.get_line_offset())
+                self.current_tab.src_view.scroll_to_iter(end,
+                    within_margin=0.0, use_align=True, xalign=0.0, yalign=0.5)
+                self.current_tab.buffer.select_range(start, end)
+                # XXX: jump focus + hotkeys?
+        else:
+            # First search in this buffer; create a context.
+            settings = GtkSource.SearchSettings(
+                search_text=pattern, wrap_around=True)
+            self.current_tab.search_ctx = GtkSource.SearchContext(
+                buffer=self.current_tab.buffer, 
+                settings=settings)
+            self.current_tab.search_pos = (0, 0)
 
 def sandbox()->None:
     import unittest.mock as mock

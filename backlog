@@ -13,7 +13,6 @@ Code Comprehension
 - user-provided annotations / connections
 
 Editing UI
-- find
 - goto line
 - multiple columns
 - highlight current symbol
@@ -21,6 +20,7 @@ Editing UI
 - inotify
 - indent level cue
 - replace
+- find focuses selection, has hotkeys.
 - vim bindings
 - sourceview style picker
 
@@ -33,3 +33,8 @@ Other UI
 - workspace management
 - preserve comments in config
 - style overrides
+
+Large Files
+- Don't buffer entire files in memory
+- Async search
+- ????
