@@ -69,7 +69,7 @@ def do_stats(args:argparse.Namespace)->None:
     db = Sqlite(ws.symbol_index)
     try:
         stats = db.dump_stats()
-        w = max([len(f) for f in stats['files']]) # col width for align
+        w = max([len(f) for f in stats['files']]) if stats['files'] else 0 # col width for align
         for f in sorted(stats['files']):
             print('{:{w}} {} symbols, {} imports'.format(f,
                 stats['symbols'].get(f, 0), stats['imports'].get(f, 0), w=w))
@@ -97,19 +97,19 @@ def main(argv:List[str]) -> None:
     parser.set_defaults(func=lambda _: parser.error('sub-command required'))
     subparsers = parser.add_subparsers()
 
-    create = subparsers.add_parser('create')
+    create = subparsers.add_parser('create', help="Create new (empty) index")
     create.add_argument('--root', '-r', type=str, default=None,
         help='Root directory to index.  [default: parent(--dir)]')
     create.add_argument('--clobber', action='store_true', default=False,
         help='Replace an existing index')
     create.set_defaults(func=do_create)
 
-    update = subparsers.add_parser('update')
+    update = subparsers.add_parser('update', help="Re-index a particular file")
     update.add_argument('path', type=str,
         help='Path to update in the index.  Abs, or relative to index root.')
     update.set_defaults(func=do_update)
 
-    update_all = subparsers.add_parser('update-all')
+    update_all = subparsers.add_parser('update-all', help="Re-index all files")
     update_all.set_defaults(func=do_update_all)
 
     dump = subparsers.add_parser('dump',
