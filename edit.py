@@ -21,12 +21,13 @@ from typing import List
 from ui.main_window import MainWindow
 from workspace.workspace import Workspace, initialize_workspace
 
+log = logging.getLogger(__name__)
+
 def open_workspace(args:argparse.Namespace) -> Workspace:    
     if args.create:
         initialize_workspace(args.workspace)
     if not os.path.isdir(args.workspace):
-        logging.warn(
-        'Workspace doesn\'t exist: {}'.format(args.workspace))
+        log.warn( 'Workspace doesn\'t exist: {}'.format(args.workspace))
     return Workspace(args.workspace)
     
 def load_css(ws:Workspace) -> None:

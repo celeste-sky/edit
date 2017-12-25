@@ -14,6 +14,8 @@ from typing import Dict, List, Tuple
 from workspace.workspace import Workspace
 from workspace.path import Path
 
+log = logging.getLogger(__name__)
+
 class SourceGraph(object):
     def __init__(self, workspace:Workspace) -> None:
         self.workspace = workspace
@@ -29,7 +31,7 @@ class SourceGraph(object):
         for p in self.workspace.files:
             f = new_file(p, self.workspace)
             if f:
-                logging.debug('Loaded file: {}'.format(p))
+                log.debug('Loaded file: {}'.format(p))
                 files[p] = f
 
         # Now, check each files for imports external to the workspace

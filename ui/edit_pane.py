@@ -13,6 +13,8 @@ import os.path
 from ui.wrappers import UIPath
 from workspace.path import Path
 
+log = logging.getLogger(__name__)
+
 Tab = collections.namedtuple('Tab', ['src_view', 'buffer', 'path'])
 
 class EditPane(Gtk.Notebook):
@@ -65,7 +67,7 @@ class EditPane(Gtk.Notebook):
                     content = f.read()
             except IOError as e:
                 content = ''
-                logging.info("Couldn't open {}: {}".format(path, e))
+                log.info("Couldn't open {}: {}".format(path, e))
                 
         # XXX make this less of a hack
         view_opts = self.workspace.editor_options
@@ -143,7 +145,7 @@ class EditPane(Gtk.Notebook):
             self.emit('switch-file', UIPath(self.tabs[index].path))
             
     def find_handler(self, widget):
-        logging.info("Find!")
+        log.info("Find!")
 
 def sandbox():
     import unittest.mock as mock

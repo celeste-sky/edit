@@ -13,6 +13,8 @@ from typing import Callable, Dict, List, Optional, Set
 
 from workspace.path import Path
 
+log = logging.getLogger(__name__)
+
 def initialize_workspace(path:str) -> None:
     '''
     Set up a new worspace directory at the given path.
@@ -35,7 +37,7 @@ class Workspace(object):
         self.reload_file_list()
 
     def reload_file_list(self) -> None:
-        logging.info("Loading workspace file list")
+        log.info("Loading workspace file list")
         root = self.root_dir
         new_files = set()
 
@@ -64,7 +66,7 @@ class Workspace(object):
                 self.config = json.loads(f.read())
         except IOError as e:
             if os.path.exists(config_path):
-                logging.error('Failed to write {}: {}'.format(config_path, e))
+                log.error('Failed to write {}: {}'.format(config_path, e))
             else:
                 # it's valid for no config to exist
                 pass
@@ -79,7 +81,7 @@ class Workspace(object):
             with open(os.path.join(self.workspace_dir, 'config'), 'w') as f:
                 f.write(json.dumps(self.config, indent=4))
         except IOError as e:
-            logging.error('Failed to write {}: {}'.format(config_path, e))
+            log.error('Failed to write {}: {}'.format(config_path, e))
 
     @property
     def open_files(self) -> List[Path]:

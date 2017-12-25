@@ -14,6 +14,8 @@ import os.path
 from typing import Any, Callable, Dict, IO, List, Optional, Tuple
 from workspace.path import Path
 
+log = logging.getLogger(__name__)
+
 # The signature of imp.find_module
 # XXX: which is deprecated since 3.3...
 FoundDesc = Tuple[Optional[str], Optional[str], int]
@@ -92,7 +94,7 @@ class Py3Parser(object):
             try:
                 tree = ast.parse(f.read())
             except SyntaxError as e:
-                logging.info("Couldn't parse {}: {}".format(path, e))
+                log.info("Couldn't parse {}: {}".format(path, e))
                 raise
 
         syms: List[Symbol] = []
@@ -137,7 +139,7 @@ class Py3Parser(object):
                     os.path.realpath(paths[-1]), path.ws_root)))
             except ImportError as e:
                 if definitely_module:
-                    logging.info('Failed to resolve {}:{}: {}'.format(
+                    log.info('Failed to resolve {}:{}: {}'.format(
                         path.abs, s_name, e))
 
         return syms, resolved_imports
