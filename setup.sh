@@ -3,8 +3,6 @@
 # Install needed dependencies.  Obviously Debian-specific, and probably
 # Ubuntu-specific.  Tested on Ubuntu 17.10, which is probably the current
 # minimum, for an out-of-the box python 3.6 and mypy in apt.
-#
-# For instructions on running on 16.04, refer to xenial-env.sh
 
 set -e
 
