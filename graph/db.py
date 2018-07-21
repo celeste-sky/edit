@@ -6,7 +6,7 @@
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 
-from graph.symbol import Symbol, SymbolType
+from graph.symbol import Symbol, SymbolClass, SymbolType
 import os.path
 import sqlite3
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple
@@ -51,7 +51,7 @@ class DB(object):
         raise NotImplementedError()
 
 class Sqlite(DB):
-    SCHEMA_VERSION = "2"
+    SCHEMA_VERSION = "3"
 
     def __init__(self, db_path: Path, create: bool=False) -> None:
         need_create = False
@@ -81,7 +81,18 @@ class Sqlite(DB):
                     id integer PRIMARY KEY,
                     path text UNIQUE NOT NULL,
                     hash text)''')
-            # XXX: type should be a foreign key into an enum table.
+            self.conn.execute('''
+                CREATE TABLE symbol_classes (
+                    id integer UNIQUE NOT NULL,
+                    name text UNIQUE NOT NULL
+                )''')
+            self.conn.execute('''
+                CREATE TABLE symbol_types (
+                    id integer UNIQUE NOT NULL,
+                    name text UNIQUE NOT NULL,
+                    class integer NOT NULL,
+                    FOREIGN KEY (class) REFERENCES symbol_classes(id)
+                )''')
             self.conn.execute('''
                 CREATE TABLE symbols (
                     file integer NOT NULL,
@@ -89,7 +100,8 @@ class Sqlite(DB):
                     column integer NOT NULL,
                     name text NOT NULL,
                     type integer NOT NULL,
-                    FOREIGN KEY (file) REFERENCES files(id)
+                    FOREIGN KEY (file) REFERENCES files(id),
+                    FOREIGN KEY (type) REFERENCES symbol_types(id)
                 )''')
             self.conn.execute('''
                 CREATE TABLE imports (
@@ -98,10 +110,33 @@ class Sqlite(DB):
                     resolved_path text,
                     FOREIGN KEY (file) REFERENCES files(id)
                 )''')
+            self.conn.execute('''
+                CREATE TABLE landmarks (
+                    id integer PRIMARY KEY,
+                    file integer NOT NULL,
+                    line integer NOT NULL,
+                    column integer NOT NULL,
+                    symbol_name text,
+                    symbol_type integer,
+                    FOREIGN KEY (symbol_type) REFERENCES symbol_types(id)
+                )''')
+            self.conn.execute('''
+                CREATE TABLE landmark_edges (
+                    src integer NOT NULL,
+                    dst integer NOT NULL,
+                    FOREIGN KEY (src) REFERENCES landmarks(id),
+                    FOREIGN KEY (dst) REFERENCES landmarks(id)
+                )''')
             self.conn.execute('CREATE INDEX sym_by_file ON symbols(file)')
             self.conn.execute('CREATE INDEX sym_by_name ON symbols(name)')
             self.conn.execute('INSERT INTO meta VALUES ("version", ?)',
                 Sqlite.SCHEMA_VERSION)
+            self.conn.executemany(
+                'INSERT INTO symbol_classes VALUES (?, ?)',
+                [(t.value, t.name) for t in SymbolClass])
+            self.conn.executemany(
+                'INSERT INTO symbol_types VALUES (?, ?, ?)',
+                [(t.value, t.name, t.symbol_class.value) for t in SymbolType])
 
     def _check_version(self) -> None:
         vers = self.get_schema_version()
