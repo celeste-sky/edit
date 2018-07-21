@@ -15,8 +15,42 @@ from workspace.path import Path
 class DBException(Exception):
     def __init__(self, msg: str) -> None:
         super(DBException, self).__init__(msg)
+        
+class DB(object):
+    '''
+    Defines the interface of a symbol database.
+    '''
+    def find_symbol_at(
+            self, path: Path, line: int, col: int=None) -> Optional[Symbol]:
+        '''
+        Find a symbol at the current location in the file.  If there are
+        multiple symbols on the line and col is provided, the last symbol to
+        start before col is returned.  If col is not provided, the first symbol
+        on the line is returned.
+        '''
+        raise NotImplementedError()
+        
+    def find_definitions(self,
+            name:str, typ:SymbolType=None, path_root:str='/', max_num:int=100
+            ) -> List[Symbol]:
+        '''
+        Find symbols that are definitions.
+        @param typ search for a specific one of CLASS, FUNCTION, or VALUE
+        @param path_root the cwd to use in returned symbol Path
+        '''
+        raise NotImplementedError()
 
-class Sqlite(object):
+    def find_references(self,
+            name:str, typ:SymbolType=None, path_root:str='/', max_num:int=100
+            ) -> List[Symbol]: 
+        '''
+        Find sybmols that are references.
+        @param typ search for a specific one of REFERENCE or CALL
+        @param path_root the cwd to use in the returned symbol Path
+        '''
+        raise NotImplementedError()
+
+class Sqlite(DB):
     SCHEMA_VERSION = "2"
 
     def __init__(self, db_path: Path, create: bool=False) -> None:
@@ -209,12 +243,6 @@ class Sqlite(object):
 
     def find_symbol_at(
             self, path: Path, line: int, col: int=None) -> Optional[Symbol]:
-        '''
-        Find a symbol at the current location in the file.  If there are
-        multiple symbols on the line and col is provided, the last symbol to
-        start before col is returned.  If col is not provided, the first symbol
-        on the line is returned.
-        '''
         with self.conn:
             file_id = self._get_file_id(path)
             if file_id is None:
@@ -262,11 +290,6 @@ class Sqlite(object):
     def find_definitions(self,
             name:str, typ:SymbolType=None, path_root:str='/', max_num:int=100
             ) -> List[Symbol]:
-        '''
-        Find symbols that are definitions.
-        @param typ search for a specific one of CLASS, FUNCTION, or VALUE
-        @param path_root the cwd to use in returned symbol Path
-        '''
         if typ is None:
             return self._do_search(
                 'AND type>=? AND type<=?',
@@ -279,11 +302,6 @@ class Sqlite(object):
     def find_references(self,
             name:str, typ:SymbolType=None, path_root:str='/', max_num:int=100
             ) -> List[Symbol]:
-        '''
-        Find sybmols that are references.
-        @param typ search for a specific one of REFERENCE or CALL
-        @param path_root the cwd to use in the returned symbol Path
-        '''
         if typ is None:
             return self._do_search(
                 'AND type>=? AND type<=?',
